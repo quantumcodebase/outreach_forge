@@ -1,0 +1,22 @@
+{
+  "name": "cold-email-cockpit",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @cockpit/web",
+    "dev:worker": "npm run dev -w @cockpit/worker",
+    "db:generate": "npm run generate -w @cockpit/db",
+    "db:migrate": "npm run migrate:deploy -w @cockpit/db",
+    "lint": "npm run lint -ws --if-present",
+    "typecheck": "npm run typecheck -ws --if-present",
+    "build": "npm run build -ws --if-present",
+    "db:status:host": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cold_email_cockpit?schema=public prisma migrate status --schema packages/db/prisma/schema.prisma"
+  },
+  "devDependencies": {
+    "cross-env": "7.0.3"
+  }
+}

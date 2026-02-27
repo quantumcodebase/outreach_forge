@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EmailAccountStatus {
+  active
+  paused
+  error
+}
+
+enum LeadStatus {
+  active
+  suppressed
+}
+
+enum SuppressionReason {
+  bounce_hard
+  unsubscribe
+  manual
+  complaint
+}
+
+enum CampaignStatus {
+  draft
+  active
+  paused
+  finished
+}
+
+enum EnrollmentStatus {
+  active
+  replied
+  bounced
+  unsubscribed
+  finished
+  paused
+}
+
+enum MessageDirection {
+  sent
+  received
+}
+
+enum EventType {
+  sent
+  bounce_hard
+  bounce_soft
+  reply
+  unsubscribe
+  open
+}
+
+model email_accounts {
+  id                   String             @id @default(uuid()) @db.Uuid
+  label                String             @db.Text
+  imap_host            String             @db.Text
+  imap_port            Int
+  imap_user            String             @db.Text
+  smtp_host            String             @db.Text
+  smtp_port            Int
+  smtp_user            String             @db.Text
+  encrypted_pass       String             @db.Text
+  daily_cap            Int                @default(50)
+  sending_window_start DateTime           @db.Time(6)
+  sending_window_end   DateTime           @db.Time(6)
+  timezone             String             @db.Text
+  status               EmailAccountStatus
+  last_synced_at       DateTime?          @db.Timestamptz(6)
+  last_uid_synced      BigInt?
+  bounce_count         Int                @default(0)
+  reply_count          Int                @default(0)
+  created_at           DateTime           @default(now()) @db.Timestamptz(6)
+
+  campaigns campaigns[]
+  messages  messages[]
+}
+
+model leads {
+  id            String           @id @default(uuid()) @db.Uuid
+  email         String           @unique @db.Text
+  first_name    String?          @db.Text
+  last_name     String?          @db.Text
+  company       String?          @db.Text
+  title         String?          @db.Text
+  city          String?          @db.Text
+  tags          String[]
+  custom_fields Json
+  status        LeadStatus
+  created_at    DateTime         @default(now()) @db.Timestamptz(6)
+
+  enrollments enrollments[]
+  events      events[]
+}
+
+model suppression_list {
+  id                 String             @id @default(uuid()) @db.Uuid
+  email              String             @db.Text
+  reason             SuppressionReason
+  source_campaign_id String?            @db.Uuid
+  added_at           DateTime           @default(now()) @db.Timestamptz(6)
+
+  source_campaign campaigns? @relation(fields: [source_campaign_id], references: [id])
+
+  @@index([email])
+}
+
+model campaigns {
+  id                   String            @id @default(uuid()) @db.Uuid
+  name                 String            @db.Text
+  from_account_id      String            @db.Uuid
+  daily_cap            Int
+  sending_window_start DateTime          @db.Time(6)
+  sending_window_end   DateTime          @db.Time(6)
+  timezone             String            @db.Text
+  status               CampaignStatus
+  created_at           DateTime          @default(now()) @db.Timestamptz(6)
+
+  from_account     email_accounts    @relation(fields: [from_account_id], references: [id])
+  steps            steps[]
+  enrollments      enrollments[]
+  events           events[]
+  suppression_list suppression_list[]
+}
+
+model steps {
+  id               String      @id @default(uuid()) @db.Uuid
+  campaign_id      String      @db.Uuid
+  step_number      Int
+  subject_template String      @db.Text
+  body_template    String      @db.Text
+  delay_days       Int
+
+  campaign campaigns @relation(fields: [campaign_id], references: [id])
+  messages messages[]
+
+  @@unique([campaign_id, step_number])
+}
+
+model enrollments {
+  id           String           @id @default(uuid()) @db.Uuid
+  lead_id      String           @db.Uuid
+  campaign_id  String           @db.Uuid
+  current_step Int
+  status       EnrollmentStatus
+  enrolled_at  DateTime         @default(now()) @db.Timestamptz(6)
+  last_sent_at DateTime?        @db.Timestamptz(6)
+  next_send_at DateTime?        @db.Timestamptz(6)
+  thread_id    String?          @db.Text
+
+  lead      leads     @relation(fields: [lead_id], references: [id])
+  campaign  campaigns @relation(fields: [campaign_id], references: [id])
+  messages  messages[]
+  events    events[]
+
+  @@unique([lead_id, campaign_id])
+}
+
+model messages {
+  id                String           @id @default(uuid()) @db.Uuid
+  enrollment_id     String?          @db.Uuid
+  step_id           String?          @db.Uuid
+  account_id        String           @db.Uuid
+  direction         MessageDirection
+  message_id_header String?          @db.Text
+  in_reply_to       String?          @db.Text
+  references_header String?          @db.Text
+  subject           String?          @db.Text
+  body_preview      String?          @db.VarChar(300)
+  sent_at           DateTime?        @db.Timestamptz(6)
+  received_at       DateTime?        @db.Timestamptz(6)
+
+  enrollment enrollments?   @relation(fields: [enrollment_id], references: [id])
+  step       steps?         @relation(fields: [step_id], references: [id])
+  account    email_accounts @relation(fields: [account_id], references: [id])
+
+  @@index([message_id_header])
+}
+
+model events {
+  id            String    @id @default(uuid()) @db.Uuid
+  lead_id       String?   @db.Uuid
+  campaign_id   String?   @db.Uuid
+  enrollment_id String?   @db.Uuid
+  type          EventType
+  metadata      Json
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+
+  lead       leads?       @relation(fields: [lead_id], references: [id])
+  campaign   campaigns?   @relation(fields: [campaign_id], references: [id])
+  enrollment enrollments? @relation(fields: [enrollment_id], references: [id])
+
+  @@index([type, created_at])
+}
