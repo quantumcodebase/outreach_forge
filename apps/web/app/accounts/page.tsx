@@ -40,6 +40,7 @@ export default function AccountsPage() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const { push } = useToast();
 
   async function load() {
@@ -113,6 +114,20 @@ export default function AccountsPage() {
     }
   }
 
+  async function syncNow() {
+    setSyncing(true);
+    try {
+      const res = await fetch('/api/accounts/sync', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error('Failed to queue sync');
+      push({ kind: 'success', title: 'Sync queued', description: 'Worker will process inbox updates shortly.' });
+    } catch {
+      push({ kind: 'error', title: 'Sync failed', description: 'Could not queue IMAP sync. Check worker logs.' });
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <DataTable
@@ -121,9 +136,14 @@ export default function AccountsPage() {
         onSearch={setQuery}
         searchPlaceholder="Search label or user"
         rightSlot={
-          <button onClick={() => setDrawerOpen(true)} className="rounded-md bg-white px-3 py-2 text-sm font-medium text-black hover:bg-zinc-200">
-            Add account
-          </button>
+          <div className="flex gap-2">
+            <button onClick={syncNow} disabled={syncing} className="rounded-md border border-white/20 px-3 py-2 text-sm text-zinc-200 hover:bg-white/10 disabled:opacity-60">
+              {syncing ? 'Syncing…' : 'Sync now'}
+            </button>
+            <button onClick={() => setDrawerOpen(true)} className="rounded-md bg-white px-3 py-2 text-sm font-medium text-black hover:bg-zinc-200">
+              Add account
+            </button>
+          </div>
         }
         headers={[
           { key: 'label', label: 'Label', sortable: true, onSort: () => setSortAsc((s) => !s) },
