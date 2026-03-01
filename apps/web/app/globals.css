@@ -1,3 +1,19 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-zinc-950 text-zinc-100 antialiased;
+}
+
+h1 {
+  @apply text-2xl font-semibold tracking-tight;
+}
+
+h2 {
+  @apply text-xl font-semibold tracking-tight;
+}
