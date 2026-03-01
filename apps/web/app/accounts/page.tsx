@@ -47,10 +47,15 @@ export default function AccountsPage() {
     setError(null);
     try {
       const res = await fetch('/api/accounts');
+      if (!res.ok) {
+        setError(`Server responded with ${res.status}.`);
+        setAccounts([]);
+        return;
+      }
       const data: AccountsResponse = await res.json();
       setAccounts(data.accounts || []);
     } catch {
-      setError('Unable to load accounts. Check server health and try again.');
+      setError('Server responded with an invalid payload.');
     } finally {
       setLoading(false);
     }
@@ -133,7 +138,7 @@ export default function AccountsPage() {
         {loading ? (
           <tr><td colSpan={7} className="p-4"><LoadingSkeleton rows={4} /></td></tr>
         ) : error ? (
-          <tr><td colSpan={7} className="p-4"><ErrorState title="Could not load accounts" description={error} retry={load} /></td></tr>
+          <tr><td colSpan={7} className="p-4"><ErrorState title="Couldn’t load accounts" description={error} retry={load} /></td></tr>
         ) : filtered.length === 0 ? (
           <tr>
             <td colSpan={7} className="p-4">
@@ -162,7 +167,7 @@ export default function AccountsPage() {
           <button className="flex-1" onClick={() => setDrawerOpen(false)} aria-label="Close" />
           <div className="w-full max-w-xl space-y-4 border-l border-white/10 bg-zinc-950 p-6">
             <div className="flex items-center justify-between">
-              <h2>Add account</h2>
+              <h2 className="text-xl">Add account</h2>
               <button onClick={() => setDrawerOpen(false)} className="text-sm text-zinc-400 hover:text-zinc-100">Close</button>
             </div>
             <p className="text-sm text-zinc-400">Passwords are never shown after save. Connection tests return only redacted details.</p>
