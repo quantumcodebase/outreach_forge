@@ -114,10 +114,10 @@ export default function AccountsPage() {
     }
   }
 
-  async function syncNow() {
+  async function syncNow(accountId?: string) {
     setSyncing(true);
     try {
-      const res = await fetch('/api/accounts/sync', { method: 'POST' });
+      const res = await fetch('/api/accounts/sync', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(accountId ? { accountId } : {}) });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error('Failed to queue sync');
       push({ kind: 'success', title: 'Sync queued', description: 'Worker will process inbox updates shortly.' });
@@ -137,7 +137,7 @@ export default function AccountsPage() {
         searchPlaceholder="Search label or user"
         rightSlot={
           <div className="flex gap-2">
-            <button onClick={syncNow} disabled={syncing} className="rounded-md border border-white/20 px-3 py-2 text-sm text-zinc-200 hover:bg-white/10 disabled:opacity-60">
+            <button onClick={() => syncNow()} disabled={syncing} className="rounded-md border border-white/20 px-3 py-2 text-sm text-zinc-200 hover:bg-white/10 disabled:opacity-60">
               {syncing ? 'Syncing…' : 'Sync now'}
             </button>
             <button onClick={() => setDrawerOpen(true)} className="rounded-md bg-white px-3 py-2 text-sm font-medium text-black hover:bg-zinc-200">
@@ -174,8 +174,9 @@ export default function AccountsPage() {
               <td className="px-4 py-3">{a.daily_cap}</td>
               <td className="px-4 py-3 text-zinc-300">{a.timezone}</td>
               <td className="px-4 py-3 text-zinc-400">{a.last_synced_at ? new Date(a.last_synced_at).toLocaleString() : 'Never'}</td>
-              <td className="px-4 py-3">
+              <td className="px-4 py-3 space-x-2">
                 <button onClick={() => setDrawerOpen(true)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Test</button>
+                <button onClick={() => syncNow(a.id)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Sync now</button>
               </td>
             </tr>
           ))

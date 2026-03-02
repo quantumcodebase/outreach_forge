@@ -10,7 +10,11 @@
   },
   "dependencies": {
     "@cockpit/db": "0.1.0",
-    "pg-boss": "10.1.6"
+    "pg-boss": "10.1.6",
+    "imapflow": "1.0.183",
+    "mailparser": "3.7.2",
+    "nodemailer": "6.10.0",
+    "@cockpit/shared": "0.1.0"
   },
   "devDependencies": {
     "@types/node": "22.13.4",

@@ -169,6 +169,7 @@ model messages {
   message_id_header String?          @db.Text
   in_reply_to       String?          @db.Text
   references_header String?          @db.Text
+  thread_id         String?          @db.Text
   subject           String?          @db.Text
   body_preview      String?          @db.VarChar(300)
   sent_at           DateTime?        @db.Timestamptz(6)
@@ -179,6 +180,7 @@ model messages {
   account    email_accounts @relation(fields: [account_id], references: [id])
 
   @@index([message_id_header])
+  @@index([thread_id])
 }
 
 model events {

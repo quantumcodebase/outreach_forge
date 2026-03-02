@@ -7,15 +7,18 @@ import type { ReactNode } from 'react';
 const nav = [
   { href: '/inbox', label: 'Inbox' },
   { href: '/accounts', label: 'Accounts' },
-  { href: '#', label: 'Campaigns', disabled: true },
-  { href: '#', label: 'Leads', disabled: true },
-  { href: '#', label: 'Analytics', disabled: true },
+  { href: '/campaigns', label: 'Campaigns' },
+  { href: '/leads', label: 'Leads' },
+  { href: '/analytics', label: 'Analytics' },
   { href: '#', label: 'Settings', disabled: true }
 ];
 
 const titleByPath = new Map<string, string>([
   ['/inbox', 'Inbox'],
   ['/accounts', 'Accounts'],
+  ['/campaigns', 'Campaigns'],
+  ['/leads', 'Leads'],
+  ['/analytics', 'Analytics'],
   ['/', 'Overview']
 ]);
 
@@ -60,6 +63,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <h1 className="text-lg font-semibold">{title}</h1>
             <div className="flex items-center gap-2">
               <span className="rounded-full border border-sky-400/25 bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-200">Local</span>
+              {((process.env.NEXT_PUBLIC_OUTBOUND_MODE || 'dry_run').toLowerCase() === 'live') ? (
+                <span className="rounded-full border border-rose-400/30 bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-200">Live</span>
+              ) : (
+                <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-200">Dry Run</span>
+              )}
               {pathname.startsWith('/accounts') ? <Link href="/accounts" className="rounded-md border border-white/20 px-3 py-1.5 text-sm text-zinc-200 hover:bg-white/10">Manage</Link> : null}
               {pathname.startsWith('/inbox') ? <Link href="/inbox" className="rounded-md border border-white/20 px-3 py-1.5 text-sm text-zinc-200 hover:bg-white/10">Refresh</Link> : null}
             </div>

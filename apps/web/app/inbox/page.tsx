@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { EmptyState, ErrorState, LoadingSkeleton, StatusBadge } from '../../components/shared/states';
 import { useToast } from '../../components/ui/toast';
 import type { InboxResponse, InboxThread, ThreadMessage, ThreadMessagesResponse } from '../../lib/types';
@@ -26,7 +25,6 @@ export default function InboxPage() {
   const [draft, setDraft] = useState('<p>Thanks for your reply.</p>');
   const [sending, setSending] = useState(false);
   const { push } = useToast();
-  const searchParams = useSearchParams();
 
   const loadThreads = useCallback(async () => {
     setLoadingThreads(true);
@@ -41,14 +39,14 @@ export default function InboxPage() {
       const data: InboxResponse = await res.json();
       const list = data.threads || [];
       setThreads(list);
-      const fromQuery = searchParams.get('threadId');
+      const fromQuery = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('threadId') : null;
       setSelectedThreadId((prev) => prev || fromQuery || list[0]?.threadId || null);
     } catch {
       setError('Server responded with an invalid payload. Check server logs and try again.');
     } finally {
       setLoadingThreads(false);
     }
-  }, [searchParams]);
+  }, []);
 
   const loadMessages = useCallback(async (threadId: string) => {
     setLoadingMessages(true);
