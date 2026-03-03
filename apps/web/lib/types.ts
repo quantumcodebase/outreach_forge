@@ -11,6 +11,8 @@ export type Account = {
   imap_port: number;
   smtp_host: string;
   smtp_port: number;
+  sending_window_start?: string;
+  sending_window_end?: string;
 };
 
 export type AccountsResponse = { accounts: Account[] };

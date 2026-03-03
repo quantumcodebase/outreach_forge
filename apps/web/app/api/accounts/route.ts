@@ -29,7 +29,9 @@ export async function GET() {
         imap_host: true,
         imap_port: true,
         smtp_host: true,
-        smtp_port: true
+        smtp_port: true,
+        sending_window_start: true,
+        sending_window_end: true
       }
     });
     return NextResponse.json({ accounts });
