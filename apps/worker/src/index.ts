@@ -4,6 +4,7 @@ import { decrypt } from '@cockpit/shared/src/crypto';
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { runCampaignSend, runSchedulerTick } from './scheduler';
+import { processInboundClassification } from './inbound';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required');
@@ -13,8 +14,59 @@ const OUTBOUND_MODE = (process.env.OUTBOUND_MODE || 'dry_run').toLowerCase();
 
 type PlainObj = Record<string, unknown>;
 
+const BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
 function redact(value: string) {
   return value.replace(/(password|pass|auth)\s*[:=]\s*\S+/gi, '$1=***');
+}
+
+function maskUser(value: string | null | undefined) {
+  const safe = String(value || '');
+  const [name, domain] = safe.split('@');
+  if (!domain) return `${name.slice(0, 1)}***`;
+  return `${name.slice(0, 1)}***@${domain}`;
+}
+
+function credentialDiagnostics(account: any) {
+  const encrypted = String(account.encrypted_pass || '');
+  const base64Valid = BASE64_RE.test(encrypted);
+  let decodedLength = 0;
+  try {
+    decodedLength = Buffer.from(encrypted, 'base64').length;
+  } catch {
+    decodedLength = 0;
+  }
+
+  return {
+    account_id: account.id,
+    label: account.label,
+    masked_imap_user: maskUser(account.imap_user),
+    encrypted_pass_length: encrypted.length,
+    encrypted_pass_base64: base64Valid,
+    encrypted_pass_decoded_bytes: decodedLength,
+    decrypt_callsite: 'worker.imap-sync.syncAccount'
+  };
+}
+
+function getDecryptStage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/initialization vector/i.test(message) || /auth(?:entication)? tag/i.test(message) || /unable to authenticate/i.test(message)) {
+    return 'decrypt';
+  }
+  return 'imap';
+}
+
+function verifyEncryptionKeyInvariant() {
+  const keyRaw = process.env.ENCRYPTION_KEY;
+  let decodedLen = 0;
+  if (keyRaw) {
+    try {
+      decodedLen = Buffer.from(keyRaw, 'base64').length;
+    } catch {
+      decodedLen = 0;
+    }
+  }
+  console.log(`[worker] crypto env ENCRYPTION_KEY present=${Boolean(keyRaw)} decoded_bytes=${decodedLen}`);
 }
 
 function deriveThreadId(messageId?: string | null, inReplyTo?: string | null, references?: string | null) {
@@ -37,12 +89,6 @@ async function getPreview(source: Buffer) {
   return text.replace(/\s+/g, ' ').trim().slice(0, 300);
 }
 
-function classifyInbound(from: string, subject: string, body: string): 'bounce_hard' | 'bounce_soft' | 'reply' {
-  const s = `${from} ${subject} ${body}`.toLowerCase();
-  if (s.includes('mailer-daemon') || s.includes('delivery status notification') || s.includes('5.1.1') || s.includes('user unknown')) return 'bounce_hard';
-  if (s.includes('mailbox full') || s.includes('temporary failure') || s.includes('4.')) return 'bounce_soft';
-  return 'reply';
-}
 
 async function postWebhook(eventId: string) {
   const WEBHOOK_URL = process.env.WEBHOOK_URL;
@@ -51,15 +97,17 @@ async function postWebhook(eventId: string) {
   const event = await prisma.events.findUnique({ where: { id: eventId }, include: { lead: true } });
   if (!event) return;
 
+  const meta = (event.metadata || {}) as PlainObj;
   const payload = {
     event_type: event.type,
     event_id: event.id,
     created_at: event.created_at,
+    lead_email: event.lead?.email || null,
     lead_id: event.lead_id,
-    email: event.lead?.email || null,
     campaign_id: event.campaign_id,
     enrollment_id: event.enrollment_id,
-    ...(event.metadata as PlainObj)
+    thread_id: (meta.thread_id as string | undefined) || null,
+    mode: (meta.mode as string | undefined) || 'dry_run'
   };
 
   const res = await fetch(WEBHOOK_URL, {
@@ -86,11 +134,14 @@ async function createEvent(input: {
       metadata: (input.metadata || {}) as any
     }
   });
-  await boss.send('webhook-delivery', { eventId: event.id });
+  await boss.send('webhook-delivery', { eventId: event.id }, { retryLimit: 5, retryDelay: 30, retryBackoff: true });
   return event;
 }
 
 async function syncAccount(account: any) {
+  const diag = credentialDiagnostics(account);
+  console.log('[worker] decrypt diagnostics', JSON.stringify(diag));
+
   const pass = decrypt(account.encrypted_pass);
   const imap = new ImapFlow({
     host: account.imap_host,
@@ -119,7 +170,6 @@ async function syncAccount(account: any) {
     const exists = await prisma.messages.findFirst({ where: { account_id: account.id, message_id_header: messageId } });
     if (!exists) {
       const existingSent = await prisma.messages.findFirst({ where: { direction: 'sent', OR: [{ message_id_header: inReplyTo || '' }, { thread_id: threadId || '' }] }, include: { enrollment: true } });
-      const classification = classifyInbound(sender, subject, preview);
 
       await prisma.messages.create({
         data: {
@@ -136,34 +186,15 @@ async function syncAccount(account: any) {
         }
       });
 
-      if (existingSent?.enrollment_id && existingSent.enrollment) {
-        if (classification === 'reply') {
-          await prisma.enrollments.update({ where: { id: existingSent.enrollment_id }, data: { status: 'replied' } });
-          await createEvent({
-            type: 'reply',
-            lead_id: existingSent.enrollment.lead_id,
-            campaign_id: existingSent.enrollment.campaign_id,
-            enrollment_id: existingSent.enrollment.id,
-            metadata: { thread_id: threadId, message_id_header: messageId }
-          });
-        }
-        if (classification === 'bounce_hard' || classification === 'bounce_soft') {
-          await prisma.enrollments.update({ where: { id: existingSent.enrollment_id }, data: { status: 'bounced' } });
-          if (classification === 'bounce_hard') {
-            const lead = await prisma.leads.findUnique({ where: { id: existingSent.enrollment.lead_id } });
-            if (lead) {
-              await prisma.suppression_list.create({ data: { email: lead.email, reason: 'bounce_hard', source_campaign_id: existingSent.enrollment.campaign_id } }).catch(() => undefined);
-            }
-          }
-          await createEvent({
-            type: classification,
-            lead_id: existingSent.enrollment.lead_id,
-            campaign_id: existingSent.enrollment.campaign_id,
-            enrollment_id: existingSent.enrollment.id,
-            metadata: { thread_id: threadId, message_id_header: messageId }
-          });
-        }
-      }
+      await processInboundClassification({
+        threadId: threadId || null,
+        messageId,
+        from: sender,
+        subject,
+        preview,
+        inReplyTo: inReplyTo || null,
+        references: references || null
+      });
     }
 
     maxProcessedUid = Math.max(maxProcessedUid, Number(msg.uid));
@@ -179,6 +210,7 @@ async function syncAccount(account: any) {
 
 
 async function main() {
+  verifyEncryptionKeyInvariant();
   await prisma.$connect();
   await boss.start();
   console.log('[worker] pg-boss connected');
@@ -203,7 +235,32 @@ async function main() {
         await syncAccount(account);
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        console.error(`[worker] imap sync failed account=${account.id}: ${redact(msg)}`);
+        const stage = getDecryptStage(error);
+        const stack = error instanceof Error ? error.stack : undefined;
+
+        console.error(`[worker] imap sync failed account=${account.id} stage=${stage}: ${redact(msg)}`);
+        if (stack) {
+          console.error(`[worker] stack account=${account.id}\n${stack}`);
+        }
+
+        await prisma.email_accounts.update({
+          where: { id: account.id },
+          data: { status: 'error' }
+        });
+
+        await prisma.events.create({
+          data: {
+            type: 'open',
+            metadata: {
+              stage,
+              account_id: account.id,
+              label: account.label,
+              masked_imap_user: maskUser(account.imap_user),
+              masked_smtp_user: maskUser(account.smtp_user),
+              reason: redact(msg)
+            } as any
+          }
+        });
       }
     }
   });
@@ -240,9 +297,9 @@ async function main() {
     }
   });
 
-  await boss.schedule('heartbeat-cron', '* * * * *', { ts: Date.now() });
-  await boss.schedule('imap-sync-cron', '*/2 * * * *', { ts: Date.now() });
-  await boss.schedule('scheduler-tick-cron', '* * * * *', { ts: Date.now() });
+  await boss.schedule('heartbeat', '* * * * *', { ts: Date.now() });
+  await boss.schedule('imap-sync', '*/2 * * * *', { ts: Date.now() });
+  await boss.schedule('scheduler-tick', '* * * * *', { ts: Date.now() });
 
   await boss.send('heartbeat', { startup: true });
   await boss.send('imap-sync', { startup: true });
