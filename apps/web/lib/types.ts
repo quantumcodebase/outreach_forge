@@ -6,6 +6,11 @@ export type Account = {
   timezone: string;
   last_synced_at: string | null;
   smtp_user: string;
+  imap_user: string;
+  imap_host: string;
+  imap_port: number;
+  smtp_host: string;
+  smtp_port: number;
 };
 
 export type AccountsResponse = { accounts: Account[] };

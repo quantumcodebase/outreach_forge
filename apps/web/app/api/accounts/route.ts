@@ -24,7 +24,12 @@ export async function GET() {
         daily_cap: true,
         timezone: true,
         last_synced_at: true,
-        smtp_user: true
+        smtp_user: true,
+        imap_user: true,
+        imap_host: true,
+        imap_port: true,
+        smtp_host: true,
+        smtp_port: true
       }
     });
     return NextResponse.json({ accounts });

@@ -41,6 +41,13 @@ export default function AccountsPage() {
   const [testResult, setTestResult] = useState<string | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [fixing, setFixing] = useState<Account | null>(null);
+  const [fixPassword, setFixPassword] = useState('');
+  const [fixSaving, setFixSaving] = useState(false);
+  const [fixTesting, setFixTesting] = useState(false);
+  const [fixActivating, setFixActivating] = useState(false);
+  const [fixTestOk, setFixTestOk] = useState(false);
+  const [fixTestResult, setFixTestResult] = useState<string | null>(null);
   const { push } = useToast();
 
   async function load() {
@@ -128,6 +135,87 @@ export default function AccountsPage() {
     }
   }
 
+  function openFix(account: Account) {
+    setFixing(account);
+    setFixPassword('');
+    setFixTestOk(false);
+    setFixTestResult(null);
+  }
+
+  async function saveFixedCredentials() {
+    if (!fixing || !fixPassword.trim()) return;
+    setFixSaving(true);
+    try {
+      const res = await fetch(`/api/accounts/${fixing.id}/credentials`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ password: fixPassword })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to update credentials');
+      push({ kind: 'success', title: 'Credentials updated', description: 'Saved securely. Testing connection now…' });
+      await testFixedConnection();
+      await load();
+    } catch {
+      push({ kind: 'error', title: 'Update failed', description: 'Could not save credentials.' });
+    } finally {
+      setFixSaving(false);
+    }
+  }
+
+  async function testFixedConnection() {
+    if (!fixing || !fixPassword.trim()) return;
+    setFixTesting(true);
+    try {
+      const res = await fetch('/api/accounts/test', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          imap_host: fixing.imap_host,
+          imap_port: fixing.imap_port,
+          imap_user: fixing.imap_user,
+          smtp_host: fixing.smtp_host,
+          smtp_port: fixing.smtp_port,
+          smtp_user: fixing.smtp_user,
+          password: fixPassword
+        })
+      });
+      const data: AccountTestResponse = await res.json();
+      const ok = data.imap.ok && data.smtp.ok;
+      setFixTestOk(ok);
+      const imap = data.imap.ok ? 'IMAP OK' : `IMAP failed (${scrub(data.imap.error)})`;
+      const smtp = data.smtp.ok ? 'SMTP OK' : `SMTP failed (${scrub(data.smtp.error)})`;
+      setFixTestResult(`${imap} • ${smtp}`);
+    } catch {
+      setFixTestOk(false);
+      setFixTestResult('Connection test failed.');
+    } finally {
+      setFixTesting(false);
+    }
+  }
+
+  async function activateFixedAccount() {
+    if (!fixing) return;
+    setFixActivating(true);
+    try {
+      const res = await fetch(`/api/accounts/${fixing.id}/status`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'active' })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Activation failed');
+      push({ kind: 'success', title: 'Account activated', description: 'Sync can run now.' });
+      setFixing(null);
+      setFixPassword('');
+      await load();
+    } catch {
+      push({ kind: 'error', title: 'Activation failed', description: 'Credentials are still invalid or account failed validation.' });
+    } finally {
+      setFixActivating(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <DataTable
@@ -177,7 +265,7 @@ export default function AccountsPage() {
               <td className="px-4 py-3 space-x-2">
                 <button onClick={() => setDrawerOpen(true)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Test</button>
                 <button onClick={() => syncNow(a.id)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Sync now</button>
-                {a.status === 'error' ? <span className="ml-2 text-[11px] text-amber-300">Fix: re-enter password</span> : null}
+                {a.status === 'error' ? <button onClick={() => openFix(a)} className="rounded border border-amber-400/50 px-2 py-1 text-xs text-amber-200 hover:bg-amber-400/10">Fix</button> : null}
               </td>
             </tr>
           ))
@@ -214,6 +302,41 @@ export default function AccountsPage() {
           </div>
         </div>
       ) : null}
+
+      {fixing ? (
+        <div className="fixed inset-0 z-40 flex bg-black/60" role="dialog" aria-modal="true">
+          <button className="flex-1" onClick={() => setFixing(null)} aria-label="Close" />
+          <div className="w-full max-w-lg space-y-4 border-l border-white/10 bg-zinc-950 p-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl">Fix credentials</h2>
+              <button onClick={() => setFixing(null)} className="text-sm text-zinc-400 hover:text-zinc-100">Close</button>
+            </div>
+            <p className="text-sm text-zinc-400">{fixing.label} • {maskUser(fixing.smtp_user)}</p>
+            <label className="space-y-1 text-sm">
+              <span className="text-xs text-zinc-400">Mailbox password</span>
+              <input type="password" className="h-10 w-full rounded-md border border-white/15 bg-zinc-900 px-3" value={fixPassword} onChange={(e) => setFixPassword(e.target.value)} />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={saveFixedCredentials} disabled={fixSaving || !fixPassword.trim()} className="rounded-md bg-white px-3 py-2 text-sm font-medium text-black disabled:opacity-60">{fixSaving ? 'Saving…' : 'Save credentials'}</button>
+              <button onClick={testFixedConnection} disabled={fixTesting || !fixPassword.trim()} className="rounded-md border border-white/20 px-3 py-2 text-sm hover:bg-white/10 disabled:opacity-60">{fixTesting ? 'Testing…' : 'Test connection'}</button>
+              <button onClick={activateFixedAccount} disabled={fixActivating || !fixTestOk} className="rounded-md border border-emerald-400/50 px-3 py-2 text-sm text-emerald-200 hover:bg-emerald-400/10 disabled:opacity-50">{fixActivating ? 'Activating…' : 'Activate'}</button>
+            </div>
+            {fixTestResult ? <p className="rounded-md border border-white/10 bg-white/[0.02] p-3 text-sm">{fixTestResult}</p> : null}
+            {!fixTestOk ? <p className="text-xs text-zinc-500">Activate unlocks after IMAP + SMTP test pass.</p> : null}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="rounded-lg border border-white/10 bg-zinc-900/40 p-4 text-sm text-zinc-300">
+        <p className="mb-2 font-medium text-zinc-100">Phase 1 real mailbox checklist</p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li>Create mailbox in IONOS (use mailbox password, not IONOS account login).</li>
+          <li>Username must be full email address.</li>
+          <li>IMAP: imap.ionos.com:993 SSL • SMTP: smtp.ionos.com:587 STARTTLS.</li>
+          <li>Add/fix account → Test connection (IMAP OK + SMTP OK) → Activate.</li>
+          <li>Click Sync now, confirm Inbox has at least one thread, then reply from cockpit.</li>
+        </ul>
+      </div>
     </div>
   );
 }
