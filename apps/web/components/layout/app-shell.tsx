@@ -10,7 +10,7 @@ const nav = [
   { href: '/campaigns', label: 'Campaigns' },
   { href: '/leads', label: 'Leads' },
   { href: '/analytics', label: 'Analytics' },
-  { href: '#', label: 'Settings', disabled: true }
+  { href: '/suppression', label: 'Suppression' }
 ];
 
 const titleByPath = new Map<string, string>([
@@ -19,6 +19,7 @@ const titleByPath = new Map<string, string>([
   ['/campaigns', 'Campaigns'],
   ['/leads', 'Leads'],
   ['/analytics', 'Analytics'],
+  ['/suppression', 'Suppression'],
   ['/', 'Overview']
 ]);
 
@@ -36,15 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <nav className="space-y-1">
             {nav.map((item) => {
-              const active = !item.disabled && (pathname === item.href || pathname.startsWith(`${item.href}/`));
-              if (item.disabled) {
-                return (
-                  <div key={item.label} className="flex items-center justify-between rounded-md px-3 py-2 text-sm text-zinc-500">
-                    <span>{item.label}</span>
-                    <span className="rounded border border-white/10 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-zinc-500">Soon</span>
-                  </div>
-                );
-              }
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link
                   key={item.href}
@@ -64,7 +57,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-2">
               <span className="rounded-full border border-sky-400/25 bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-200">Local</span>
               {((process.env.NEXT_PUBLIC_OUTBOUND_MODE || 'dry_run').toLowerCase() === 'live') ? (
-                <span className="rounded-full border border-rose-400/30 bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-200">Live</span>
+                ((process.env.NEXT_PUBLIC_LIVE_SEND_ENABLED || '').toLowerCase() === 'true') ? (
+                  <span className="rounded-full border border-rose-400/30 bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-200">Live</span>
+                ) : (
+                  <span className="rounded-full border border-rose-400/30 bg-rose-900/30 px-2.5 py-1 text-xs font-medium text-rose-200">Live (Blocked)</span>
+                )
               ) : (
                 <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-200">Dry Run</span>
               )}

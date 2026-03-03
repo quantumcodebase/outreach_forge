@@ -1,6 +1,9 @@
 import { prisma } from '@cockpit/db';
+import crypto from 'crypto';
+import { zonedDayBounds } from './timezone.js';
 
 const OUTBOUND_MODE = (process.env.OUTBOUND_MODE || 'dry_run').toLowerCase();
+const LIVE_SEND_ENABLED = (process.env.LIVE_SEND_ENABLED || '').toLowerCase() === 'true';
 
 function jitterMs(minMinutes = 1, maxMinutes = 10) {
   const min = minMinutes * 60 * 1000;
@@ -32,6 +35,27 @@ export function computeNextSendAt(now: Date, delayDays: number, windowStart: Dat
   return new Date(scheduled.getTime() + jitterMs());
 }
 
+function signUnsubscribe(payload: Record<string, unknown>) {
+  const secret = process.env.UNSUBSCRIBE_SIGNING_SECRET || 'dev-unsub-secret-change-me';
+  const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const sig = crypto.createHmac('sha256', secret).update(encoded).digest('base64url');
+  return `${encoded}.${sig}`;
+}
+
+async function appendUnsubLink(enrollment: any, body: string) {
+  const unsubToken = signUnsubscribe({
+    leadId: enrollment.lead_id,
+    campaignId: enrollment.campaign_id,
+    enrollmentId: enrollment.id,
+    email: enrollment.lead.email,
+    issued_at: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 365
+  });
+  const unsubBase = process.env.APP_BASE_URL || 'http://localhost:4100';
+  const unsubUrl = `${unsubBase}/u/${unsubToken}`;
+  return `${body}\n\nTo stop receiving these emails, unsubscribe: ${unsubUrl}`;
+}
+
 export async function runCampaignSend(enrollmentId: string, stepId: string) {
   const enrollment = await prisma.enrollments.findUnique({
     where: { id: enrollmentId },
@@ -47,7 +71,7 @@ export async function runCampaignSend(enrollmentId: string, stepId: string) {
 
   const suppressed = await prisma.suppression_list.findFirst({ where: { email: enrollment.lead.email } });
   if (suppressed) {
-    await prisma.enrollments.update({ where: { id: enrollment.id }, data: { status: 'paused' } });
+    await prisma.enrollments.update({ where: { id: enrollment.id }, data: { status: 'unsubscribed' } });
     await prisma.events.create({
       data: {
         type: 'unsubscribe',
@@ -60,12 +84,27 @@ export async function runCampaignSend(enrollmentId: string, stepId: string) {
     return;
   }
 
-  if (OUTBOUND_MODE === 'live') {
-    throw new Error('Live outbound is disabled until unsubscribe + suppression enforcement is fully audited. Use OUTBOUND_MODE=dry_run.');
+  const missingSecret = !process.env.UNSUBSCRIBE_SIGNING_SECRET || process.env.UNSUBSCRIBE_SIGNING_SECRET === 'dev-unsub-secret-change-me';
+  if (OUTBOUND_MODE === 'live' && (!LIVE_SEND_ENABLED || missingSecret)) {
+    await prisma.events.create({
+      data: {
+        type: 'sent',
+        lead_id: enrollment.lead_id,
+        campaign_id: enrollment.campaign_id,
+        enrollment_id: enrollment.id,
+        metadata: {
+          mode: 'live',
+          blocked: true,
+          reason: !LIVE_SEND_ENABLED ? 'LIVE_SEND_ENABLED not true' : 'UNSUBSCRIBE_SIGNING_SECRET invalid'
+        } as any
+      }
+    });
+    return;
   }
 
   const subject = step.subject_template;
-  const bodyPreview = step.body_template.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+  const previewWithFooter = await appendUnsubLink(enrollment, step.body_template);
+  const bodyPreview = previewWithFooter.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
   const messageId = `<dry-${Date.now()}-${enrollment.id}@cockpit.local>`;
 
   await prisma.messages.create({
@@ -89,11 +128,12 @@ export async function runCampaignSend(enrollmentId: string, stepId: string) {
       campaign_id: enrollment.campaign_id,
       enrollment_id: enrollment.id,
       metadata: {
-        mode: 'dry_run',
-        would_send: true,
+        mode: OUTBOUND_MODE,
+        would_send: OUTBOUND_MODE !== 'live',
         enrollment_id: enrollment.id,
         campaign_id: enrollment.campaign_id,
-        lead_email: enrollment.lead.email
+        lead_email: enrollment.lead.email,
+        thread_id: enrollment.thread_id || messageId
       } as any
     }
   });
@@ -129,7 +169,7 @@ export async function runSchedulerTick(send: (enrollmentId: string, stepId: stri
   for (const enr of due) {
     const leadSuppressed = await prisma.suppression_list.findFirst({ where: { email: enr.lead.email } });
     if (leadSuppressed) {
-      await prisma.enrollments.update({ where: { id: enr.id }, data: { status: 'paused' } });
+      await prisma.enrollments.update({ where: { id: enr.id }, data: { status: 'unsubscribed' } });
       await prisma.events.create({
         data: {
           type: 'unsubscribe',
@@ -148,13 +188,13 @@ export async function runSchedulerTick(send: (enrollmentId: string, stepId: stri
       continue;
     }
 
-    const dayStart = new Date();
-    dayStart.setUTCHours(0, 0, 0, 0);
+    const tz = enr.campaign.from_account.timezone || 'UTC';
+    const { start, end } = zonedDayBounds(new Date(), tz);
     const accountCapCount = await prisma.events.count({
       where: {
         type: 'sent',
         campaign: { from_account_id: enr.campaign.from_account_id },
-        created_at: { gte: dayStart }
+        created_at: { gte: start, lte: end }
       }
     });
 
