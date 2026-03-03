@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     smtp_host: body.smtp_host,
     smtp_port: Number(body.smtp_port),
     smtp_user: body.smtp_user,
-    password: body.password
+    password: String(body.password || '').trim()
   };
 
   let imap = result(false, 'connect', null, null);

@@ -228,9 +228,32 @@ async function main() {
   await boss.work('imap-sync', async (job: any) => {
     const payload = Array.isArray(job) ? job[0]?.data : job?.data;
     const accountId = (payload as any)?.accountId as string | undefined;
-    const where = accountId ? { id: accountId, status: 'active' as const } : { status: 'active' as const };
-    const accounts = await prisma.email_accounts.findMany({ where });
+
+    const accounts = accountId
+      ? await prisma.email_accounts.findMany({ where: { id: accountId } })
+      : await prisma.email_accounts.findMany({ where: { status: 'active' as const } });
+
     for (const account of accounts) {
+      if (accountId) {
+        if (account.status === 'error') {
+          await prisma.events.create({
+            data: {
+              type: 'open',
+              metadata: {
+                stage: 'imap_sync',
+                account_id: account.id,
+                label: account.label,
+                reason: 'account_error',
+                hint: 'fix credentials/settings and activate before syncing'
+              } as any
+            }
+          });
+          continue;
+        }
+      } else if (account.status !== 'active') {
+        continue;
+      }
+
       try {
         await syncAccount(account);
       } catch (error) {
