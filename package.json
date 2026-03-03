@@ -15,7 +15,10 @@
     "typecheck": "npm run typecheck -ws --if-present",
     "build": "npm run build -ws --if-present",
     "test:smoke": "npm run build -w @cockpit/worker && cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cold_email_cockpit node scripts/smoke.js",
-    "db:status:host": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cold_email_cockpit?schema=public prisma migrate status --schema packages/db/prisma/schema.prisma"
+    "test:timezone": "npm run build -w @cockpit/worker && node scripts/test-timezone.js",
+    "test:compliance": "npm run build -w @cockpit/worker && cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cold_email_cockpit node scripts/e2e-compliance.js",
+    "db:status:host": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cold_email_cockpit?schema=public prisma migrate status --schema packages/db/prisma/schema.prisma",
+    "cleanup:accounts": "node scripts/cleanup-bad-accounts.js"
   },
   "devDependencies": {
     "cross-env": "7.0.3"

@@ -177,6 +177,7 @@ export default function AccountsPage() {
               <td className="px-4 py-3 space-x-2">
                 <button onClick={() => setDrawerOpen(true)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Test</button>
                 <button onClick={() => syncNow(a.id)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Sync now</button>
+                {a.status === 'error' ? <span className="ml-2 text-[11px] text-amber-300">Fix: re-enter password</span> : null}
               </td>
             </tr>
           ))
