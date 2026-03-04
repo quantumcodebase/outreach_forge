@@ -387,6 +387,7 @@ export default function AccountsPage() {
         searchPlaceholder="Search label or user"
         rightSlot={
           <div className="flex flex-wrap items-center gap-2">
+            {statusFilter === 'default' ? <span className="text-xs text-zinc-400">Default: Active + Paused</span> : null}
             <div className="inline-flex rounded-md border border-white/15 bg-zinc-900/70 p-0.5 text-xs">
               <button onClick={() => setStatusFilter('all')} className={`rounded px-2 py-1 ${statusFilter === 'all' ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>All</button>
               <button onClick={() => setStatusFilter('active')} className={`rounded px-2 py-1 ${statusFilter === 'active' ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>Active</button>
@@ -395,7 +396,7 @@ export default function AccountsPage() {
             </div>
             {hiddenErrorCount > 0 ? (
               <button onClick={() => setStatusFilter('error')} className="text-xs text-amber-300 underline underline-offset-2 hover:text-amber-200">
-                {hiddenErrorCount} error accounts hidden
+                  {hiddenErrorCount} error accounts hidden · View
               </button>
             ) : null}
             <button onClick={() => syncNow()} disabled={syncing} className="rounded-md border border-white/20 px-3 py-2 text-sm text-zinc-200 hover:bg-white/10 disabled:opacity-60">
@@ -437,7 +438,7 @@ export default function AccountsPage() {
               <td className="px-4 py-3 whitespace-nowrap text-zinc-300">{a.timezone}</td>
               <td className="px-4 py-3 whitespace-nowrap text-zinc-400">{a.last_synced_at ? new Date(a.last_synced_at).toLocaleString() : 'Never'}</td>
               <td className="px-4 py-3 whitespace-nowrap space-x-2">
-                <button onClick={() => setDrawerOpen(true)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Test</button>
+                <button onClick={() => openEdit(a)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Test + activate</button>
                 <button onClick={() => openEdit(a)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Edit</button>
                 <button onClick={() => syncNow(a.id)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Sync now</button>
                 {a.status === 'error' ? <button onClick={() => openFix(a)} className="rounded border border-amber-400/50 px-2 py-1 text-xs text-amber-200 hover:bg-amber-400/10">Fix</button> : null}
