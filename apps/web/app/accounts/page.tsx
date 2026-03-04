@@ -40,7 +40,9 @@ export default function AccountsPage() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'default' | 'all' | 'active' | 'paused' | 'error'>('default');
   const [syncing, setSyncing] = useState(false);
+  const [proofAccountId, setProofAccountId] = useState('');
   const [fixing, setFixing] = useState<Account | null>(null);
   const [fixPassword, setFixPassword] = useState('');
   const [fixSaving, setFixSaving] = useState(false);
@@ -82,10 +84,35 @@ export default function AccountsPage() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (!accounts.length) {
+      setProofAccountId('');
+      return;
+    }
+    if (!proofAccountId || !accounts.some((a) => a.id === proofAccountId)) {
+      setProofAccountId(accounts[0]?.id ?? '');
+    }
+  }, [accounts, proofAccountId]);
+
   const filtered = useMemo(() => {
-    const list = accounts.filter((a) => `${a.label} ${a.smtp_user}`.toLowerCase().includes(query.toLowerCase()));
-    return [...list].sort((a, b) => (sortAsc ? a.label.localeCompare(b.label) : b.label.localeCompare(a.label)));
-  }, [accounts, query, sortAsc]);
+    const searched = accounts.filter((a) => `${a.label} ${a.smtp_user}`.toLowerCase().includes(query.toLowerCase()));
+    const visible = searched.filter((a) => {
+      if (statusFilter === 'default') return a.status === 'active' || a.status === 'paused';
+      if (statusFilter === 'all') return true;
+      return a.status === statusFilter;
+    });
+    return [...visible].sort((a, b) => (sortAsc ? a.label.localeCompare(b.label) : b.label.localeCompare(a.label)));
+  }, [accounts, query, sortAsc, statusFilter]);
+
+  const hiddenErrorCount = useMemo(() => {
+    if (statusFilter !== 'default') return 0;
+    return accounts.filter((a) => a.status === 'error').length;
+  }, [accounts, statusFilter]);
+
+  const selectedProofAccount = useMemo(() => {
+    if (!proofAccountId) return accounts[0] ?? null;
+    return accounts.find((a) => a.id === proofAccountId) ?? null;
+  }, [accounts, proofAccountId]);
 
   async function saveAccount() {
     setSaving(true);
@@ -330,6 +357,27 @@ export default function AccountsPage() {
     }
   }
 
+  async function copySafeDebug() {
+    if (!selectedProofAccount) return;
+    const payload = {
+      account_id: selectedProofAccount.id,
+      status: selectedProofAccount.status,
+      imap_host: selectedProofAccount.imap_host,
+      imap_port: selectedProofAccount.imap_port,
+      smtp_host: selectedProofAccount.smtp_host,
+      smtp_port: selectedProofAccount.smtp_port,
+      masked_user: maskUser(selectedProofAccount.smtp_user || selectedProofAccount.imap_user || ''),
+      last_synced_at: selectedProofAccount.last_synced_at
+    };
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      push({ kind: 'success', title: 'Safe debug copied', description: 'Redacted account snapshot copied to clipboard.' });
+    } catch {
+      push({ kind: 'error', title: 'Copy failed', description: 'Clipboard access was blocked by the browser.' });
+    }
+  }
+
   return (
     <div className="space-y-6">
       <DataTable
@@ -338,7 +386,18 @@ export default function AccountsPage() {
         onSearch={setQuery}
         searchPlaceholder="Search label or user"
         rightSlot={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-md border border-white/15 bg-zinc-900/70 p-0.5 text-xs">
+              <button onClick={() => setStatusFilter('all')} className={`rounded px-2 py-1 ${statusFilter === 'all' ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>All</button>
+              <button onClick={() => setStatusFilter('active')} className={`rounded px-2 py-1 ${statusFilter === 'active' ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>Active</button>
+              <button onClick={() => setStatusFilter('paused')} className={`rounded px-2 py-1 ${statusFilter === 'paused' ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>Paused</button>
+              <button onClick={() => setStatusFilter('error')} className={`rounded px-2 py-1 ${statusFilter === 'error' ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>Error</button>
+            </div>
+            {hiddenErrorCount > 0 ? (
+              <button onClick={() => setStatusFilter('error')} className="text-xs text-amber-300 underline underline-offset-2 hover:text-amber-200">
+                {hiddenErrorCount} error accounts hidden
+              </button>
+            ) : null}
             <button onClick={() => syncNow()} disabled={syncing} className="rounded-md border border-white/20 px-3 py-2 text-sm text-zinc-200 hover:bg-white/10 disabled:opacity-60">
               {syncing ? 'Syncing…' : 'Sync now'}
             </button>
@@ -347,6 +406,7 @@ export default function AccountsPage() {
             </button>
           </div>
         }
+        tableMinWidthClass="min-w-[1200px]"
         headers={[
           { key: 'label', label: 'Label', sortable: true, onSort: () => setSortAsc((s) => !s) },
           { key: 'status', label: 'Status' },
@@ -370,13 +430,13 @@ export default function AccountsPage() {
         ) : (
           filtered.map((a) => (
             <tr key={a.id} className="hover:bg-white/[0.02]">
-              <td className="px-4 py-3">{a.label}</td>
-              <td className="px-4 py-3"><StatusBadge status={a.status} /></td>
-              <td className="px-4 py-3 text-zinc-300">{maskUser(a.smtp_user)}</td>
-              <td className="px-4 py-3">{a.daily_cap}</td>
-              <td className="px-4 py-3 text-zinc-300">{a.timezone}</td>
-              <td className="px-4 py-3 text-zinc-400">{a.last_synced_at ? new Date(a.last_synced_at).toLocaleString() : 'Never'}</td>
-              <td className="px-4 py-3 space-x-2">
+              <td className="px-4 py-3 whitespace-nowrap">{a.label}</td>
+              <td className="px-4 py-3 whitespace-nowrap"><StatusBadge status={a.status} /></td>
+              <td className="px-4 py-3 whitespace-nowrap text-zinc-300">{maskUser(a.smtp_user)}</td>
+              <td className="px-4 py-3 whitespace-nowrap">{a.daily_cap}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-zinc-300">{a.timezone}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-zinc-400">{a.last_synced_at ? new Date(a.last_synced_at).toLocaleString() : 'Never'}</td>
+              <td className="px-4 py-3 whitespace-nowrap space-x-2">
                 <button onClick={() => setDrawerOpen(true)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Test</button>
                 <button onClick={() => openEdit(a)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Edit</button>
                 <button onClick={() => syncNow(a.id)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Sync now</button>
@@ -482,14 +542,34 @@ export default function AccountsPage() {
       ) : null}
 
       <div className="rounded-lg border border-white/10 bg-zinc-900/40 p-4 text-sm text-zinc-300">
-        <p className="mb-2 font-medium text-zinc-100">Phase 1 real mailbox checklist</p>
-        <ul className="list-disc space-y-1 pl-5">
-          <li>Create mailbox in IONOS (use mailbox password, not IONOS account login).</li>
-          <li>Username must be full email address.</li>
-          <li>IMAP: imap.ionos.com:993 SSL • SMTP: smtp.ionos.com:587 STARTTLS.</li>
-          <li>Add/fix account → Test connection (IMAP OK + SMTP OK) → Activate.</li>
-          <li>Click Sync now, confirm Inbox has at least one thread, then reply from cockpit.</li>
-        </ul>
+        <p className="mb-2 font-medium text-zinc-100">Proof checklist (Phase 1 real mailbox)</p>
+        <ol className="list-decimal space-y-1 pl-5">
+          <li>Use IONOS defaults.</li>
+          <li>Use full email address as username.</li>
+          <li>Fix credentials with mailbox password.</li>
+          <li>Test connection → Activate → Sync now.</li>
+          <li>Verify <code>/inbox</code> has threads and send one reply.</li>
+        </ol>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-md border border-white/10 bg-black/20 p-3">
+          <span className="text-xs uppercase tracking-wide text-zinc-400">Safe debug</span>
+          <select
+            value={selectedProofAccount?.id ?? ''}
+            onChange={(e) => setProofAccountId(e.target.value)}
+            className="h-9 min-w-[220px] rounded-md border border-white/15 bg-zinc-900 px-3 text-sm"
+          >
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>{a.label} ({a.status})</option>
+            ))}
+          </select>
+          <button
+            onClick={copySafeDebug}
+            disabled={!selectedProofAccount}
+            className="rounded-md border border-white/20 px-3 py-2 text-xs hover:bg-white/10 disabled:opacity-50"
+          >
+            Copy safe debug
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -9,7 +9,8 @@ export function DataTable({
   searchPlaceholder,
   rightSlot,
   headers,
-  children
+  children,
+  tableMinWidthClass = 'min-w-max'
 }: {
   title: string;
   search?: string;
@@ -18,6 +19,7 @@ export function DataTable({
   rightSlot?: ReactNode;
   headers: Header[];
   children: ReactNode;
+  tableMinWidthClass?: string;
 }) {
   return (
     <section className="space-y-3">
@@ -37,24 +39,26 @@ export function DataTable({
       </div>
 
       <div className="overflow-hidden rounded-xl border border-white/10 bg-black/20">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-white/10 bg-white/[0.02] text-xs uppercase tracking-wide text-zinc-400">
-            <tr>
-              {headers.map((h) => (
-                <th key={h.key} className="px-4 py-3 font-medium">
-                  {h.sortable ? (
-                    <button className="hover:text-zinc-200" onClick={h.onSort}>
-                      {h.label}
-                    </button>
-                  ) : (
-                    h.label
-                  )}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">{children}</tbody>
-        </table>
+        <div className="w-full overflow-x-auto">
+          <table className={`w-full ${tableMinWidthClass} whitespace-nowrap text-left text-sm`}>
+            <thead className="border-b border-white/10 bg-white/[0.02] text-xs uppercase tracking-wide text-zinc-400">
+              <tr>
+                {headers.map((h) => (
+                  <th key={h.key} className="px-4 py-3 font-medium whitespace-nowrap">
+                    {h.sortable ? (
+                      <button className="hover:text-zinc-200" onClick={h.onSort}>
+                        {h.label}
+                      </button>
+                    ) : (
+                      h.label
+                    )}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">{children}</tbody>
+          </table>
+        </div>
       </div>
     </section>
   );
