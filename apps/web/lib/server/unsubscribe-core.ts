@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { buildControllerPayload, dispatchControllerEvent } from './controller-events';
 
 export type UnsubPayload = {
   leadId?: string;
@@ -77,7 +78,7 @@ export async function applyUnsubscribe({ token, prisma }: { token: string; prism
 
   const lead = payload.leadId ? await prisma.leads.findUnique({ where: { id: payload.leadId } }) : null;
 
-  await prisma.events.create({
+  const event = await prisma.events.create({
     data: {
       lead_id: payload.leadId || lead?.id || null,
       campaign_id: payload.campaignId || null,
@@ -86,6 +87,17 @@ export async function applyUnsubscribe({ token, prisma }: { token: string; prism
       metadata: { source: 'unsubscribe_link', email: payload.email, token_issued_at: payload.issued_at }
     }
   });
+
+  await dispatchControllerEvent(
+    buildControllerPayload({
+      event_type: 'unsubscribe',
+      event_id: event.id,
+      lead_email: payload.email,
+      lead_id: payload.leadId || null,
+      campaign_id: payload.campaignId || null,
+      enrollment_id: payload.enrollmentId || null
+    })
+  );
 
   return {
     ok: true as const,

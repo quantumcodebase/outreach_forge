@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@cockpit/db';
 import { decrypt } from '@cockpit/shared/src/crypto';
-import { makeSmtpTransport } from '../../../../lib/mail';
+import { makeSmtpTransport } from '@/lib/mail';
+import { buildControllerPayload, dispatchControllerEvent } from '@/lib/server/controller-events';
 
 
 function parseFromAddress(preview?: string | null) {
@@ -62,6 +63,15 @@ export async function POST(req: Request) {
       sent_at: new Date()
     }
   });
+
+  await dispatchControllerEvent(
+    buildControllerPayload({
+      event_type: 'reply_event',
+      event_id: created.id,
+      thread_id: parent.thread_id || null,
+      mode: process.env.OUTBOUND_MODE || 'dry_run'
+    })
+  );
 
   return NextResponse.json({ ok: true, id: created.id, messageId: result.messageId });
 }
