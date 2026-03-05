@@ -17,6 +17,10 @@
     "test:smoke": "npm run build -w @cockpit/worker && cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cold_email_cockpit node scripts/smoke.js",
     "test:timezone": "npm run build -w @cockpit/worker && node scripts/test-timezone.js",
     "test:compliance": "npm run build -w @cockpit/worker && cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cold_email_cockpit node --import tsx scripts/e2e-compliance.js",
+    "test:wlr-import": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cold_email_cockpit node --import tsx scripts/test-wlr-import.ts",
+    "test:assist": "node --import tsx scripts/test-assist.ts",
+    "test:controller-events": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cold_email_cockpit node --import tsx scripts/test-controller-events.ts",
+    "seed:wlr-demo": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cold_email_cockpit node scripts/seed-wlr-demo.js",
     "db:status:host": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cold_email_cockpit?schema=public prisma migrate status --schema packages/db/prisma/schema.prisma",
     "cleanup:accounts": "node scripts/cleanup-bad-accounts.js"
   },

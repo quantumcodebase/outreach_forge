@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { requireApiKey } from '../../../../../../lib/api-key';
-import { warmLeadRadarAdapter, type WarmLeadRadarPayload } from '../../../../../../lib/integrations/lead-sources';
-import { importWlrPayload } from '../../../../../../lib/server/wlr-import';
+import { requireApiKey } from '@/lib/api-key';
+import { warmLeadRadarAdapter, type WarmLeadRadarPayload } from '@/lib/integrations/lead-sources';
+import { importWlrPayload } from '@/lib/server/wlr-import';
 
 export async function POST(req: Request) {
   const unauthorized = requireApiKey(req);
