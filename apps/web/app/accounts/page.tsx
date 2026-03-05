@@ -378,6 +378,20 @@ export default function AccountsPage() {
     }
   }
 
+  async function copyProofChecklistTemplate() {
+    if (!selectedProofAccount) return;
+
+    const redactedAccountId = `${selectedProofAccount.id.slice(0, 6)}…`;
+    const template = `# Phase 1 Proof Capture\n\n- Account ID (redacted): ${redactedAccountId}\n- IMAP/SMTP test result (stage + ok): \n- Activation status: \n- Sync timestamp: \n- Inbox thread count: \n- Reply stored (yes/no): \n`;
+
+    try {
+      await navigator.clipboard.writeText(template);
+      push({ kind: 'success', title: 'Proof template copied', description: 'Safe proof checklist copied to clipboard.' });
+    } catch {
+      push({ kind: 'error', title: 'Copy failed', description: 'Clipboard access was blocked by the browser.' });
+    }
+  }
+
   return (
     <div className="space-y-6">
       <DataTable
@@ -569,6 +583,13 @@ export default function AccountsPage() {
             className="rounded-md border border-white/20 px-3 py-2 text-xs hover:bg-white/10 disabled:opacity-50"
           >
             Copy safe debug
+          </button>
+          <button
+            onClick={copyProofChecklistTemplate}
+            disabled={!selectedProofAccount}
+            className="rounded-md border border-white/20 px-3 py-2 text-xs hover:bg-white/10 disabled:opacity-50"
+          >
+            Copy proof checklist template
           </button>
         </div>
       </div>

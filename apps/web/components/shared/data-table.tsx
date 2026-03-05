@@ -38,8 +38,8 @@ export function DataTable({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-white/10 bg-black/20">
-        <div className="w-full overflow-x-auto">
+      <div className="rounded-xl border border-white/10 bg-black/20">
+        <div className="w-full overflow-x-auto pb-1">
           <table className={`w-full ${tableMinWidthClass} whitespace-nowrap text-left text-sm`}>
             <thead className="border-b border-white/10 bg-white/[0.02] text-xs uppercase tracking-wide text-zinc-400">
               <tr>
