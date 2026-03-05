@@ -23,6 +23,16 @@ For unsubscribe/live safety:
 - `OUTBOUND_MODE` (keep `dry_run` unless explicitly switching)
 - `LIVE_SEND_ENABLED` (must be `true` to allow live campaign sends)
 
+For WLR + Assist + Controller integrations:
+
+- `ASSIST_MODE` (`mock` default, `external` optional)
+- `MISSION_CONTROL_URL` (optional)
+- `MISSION_CONTROL_API_KEY` (optional)
+- `CLAWCONTROLLER_URL` (optional)
+- `CLAWCONTROLLER_API_KEY` (optional)
+- `CONTROLLER_EVENTS_ENABLED` (`false` default)
+- `CONTROLLER_EVENT_TARGET` (`none` default)
+
 IONOS defaults:
 
 - IMAP host: `imap.ionos.com`
@@ -46,6 +56,10 @@ Health:
 ```bash
 curl -sS http://localhost:4100/api/health
 ```
+
+WLR import contract docs: `docs/WLR_INTEGRATION.md`
+Assist integration docs: `docs/ASSIST_INTEGRATION.md`
+Controller hooks docs: `docs/CONTROLLER_HOOKS.md`
 
 ---
 
@@ -71,6 +85,15 @@ npm run build
 npm run test:smoke
 npm run test:timezone
 npm run test:compliance
+npm run test:wlr-import
+npm run test:assist
+npm run test:controller-events
+```
+
+WLR demo seed:
+
+```bash
+npm run seed:wlr-demo
 ```
 
 ---
