@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@cockpit/db';
-import { computeNextSendAt } from '../../../../../../lib/server/scheduling';
-import { requireApiKey } from '../../../../../../lib/api-key';
+import { computeNextSendAt } from '@/lib/server/scheduling';
+import { requireApiKey } from '@/lib/api-key';
 
 export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   const unauthorized = requireApiKey(req);

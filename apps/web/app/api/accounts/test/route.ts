@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { makeImapClient, makeSmtpTransport, redactError } from '../../../../lib/mail';
+import { makeImapClient, makeSmtpTransport, redactError } from '@/lib/mail';
 
 type StageResult = { ok: boolean; stage: string; error: string | null; hint: string | null };
 

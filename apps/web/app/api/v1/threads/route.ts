@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@cockpit/db';
-import { requireApiKey } from '../../../../lib/api-key';
+import { requireApiKey } from '@/lib/api-key';
 
 export async function GET(req: Request) {
   const unauthorized = requireApiKey(req);
