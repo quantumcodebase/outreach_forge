@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { requireApiKey } from '../../../../../lib/api-key';
-import { getAssistAdapter } from '../../../../../lib/integrations/assist';
-import { persistAssistOutput } from '../../../../../lib/server/assist-events';
+import { requireApiKey } from '@/lib/api-key';
+import { getAssistAdapter } from '@/lib/integrations/assist';
+import { persistAssistOutput } from '@/lib/server/assist-events';
 
 export async function POST(req: Request) {
   const unauthorized = requireApiKey(req);

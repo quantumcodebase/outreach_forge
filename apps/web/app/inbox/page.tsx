@@ -24,6 +24,7 @@ export default function InboxPage() {
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState('<p>Thanks for your reply.</p>');
   const [sending, setSending] = useState(false);
+  const [assistOutput, setAssistOutput] = useState<any | null>(null);
   const { push } = useToast();
 
   const loadThreads = useCallback(async () => {
@@ -97,6 +98,23 @@ export default function InboxPage() {
     });
     push({ kind: 'success', title: 'Thread labeled', description: label });
     await loadThreads();
+  }
+
+  async function runAssist(path: '/api/v1/assist/reply-draft' | '/api/v1/assist/thread-analysis') {
+    if (!selectedThreadId) return;
+    const apiKey = window.prompt('Enter API key for assist route (not stored):');
+    if (!apiKey) return;
+
+    const res = await fetch(path, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': apiKey },
+      body: JSON.stringify({ threadId: selectedThreadId })
+    });
+    const data = await res.json();
+    setAssistOutput(data);
+    if (path.endsWith('reply-draft') && data?.draft_body) {
+      setDraft(data.draft_body);
+    }
   }
 
   async function sendReply() {
@@ -193,6 +211,8 @@ export default function InboxPage() {
               {labels.map((l) => (
                 <button key={l} onClick={() => addLabel(l)} className="rounded-md border border-white/20 px-2 py-1 text-xs hover:bg-white/10">{l}</button>
               ))}
+              <button onClick={() => runAssist('/api/v1/assist/thread-analysis')} className="rounded-md border border-sky-400/30 px-2 py-1 text-xs text-sky-200 hover:bg-sky-500/10">Analyze thread</button>
+              <button onClick={() => runAssist('/api/v1/assist/reply-draft')} className="rounded-md border border-sky-400/30 px-2 py-1 text-xs text-sky-200 hover:bg-sky-500/10">Generate reply draft</button>
             </div>
             <div className="max-h-[45vh] space-y-2 overflow-y-auto pr-1">
               {messages.map((m) => (
@@ -211,6 +231,17 @@ export default function InboxPage() {
               <textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="h-32 w-full rounded-md border border-white/15 bg-zinc-900 p-2 text-sm" />
               <button onClick={sendReply} disabled={sending} className="rounded-md bg-white px-3 py-2 text-sm font-medium text-black disabled:opacity-60">{sending ? 'Sending…' : 'Send'}</button>
             </div>
+            {assistOutput ? (
+              <div className="rounded-lg border border-white/10 bg-zinc-900/40 p-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium text-zinc-100">Assist output ({assistOutput.mode || 'mock'})</p>
+                  <button className="rounded border border-white/20 px-2 py-1 text-xs" onClick={() => navigator.clipboard.writeText(JSON.stringify(assistOutput, null, 2))}>Copy output</button>
+                </div>
+                <pre className="mt-2 whitespace-pre-wrap text-xs text-zinc-300">{JSON.stringify(assistOutput, null, 2)}</pre>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-white/10 bg-zinc-900/30 p-3 text-xs text-zinc-500">No analysis yet. Generate a thread analysis or reply draft.</div>
+            )}
           </>
         )}
       </section>

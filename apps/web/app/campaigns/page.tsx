@@ -15,6 +15,7 @@ export default function CampaignsPage() {
   const [selectedLead, setSelectedLead] = useState<string>('');
   const [form, setForm] = useState({ name: '', from_account_id: '', daily_cap: 50, timezone: 'America/Puerto_Rico', sending_window_start: '08:00:00', sending_window_end: '17:00:00' });
   const [step, setStep] = useState({ step_number: 1, subject_template: 'Quick question, {{first_name}}', body_template: 'Hi {{first_name}},\n\nCan we chat?', delay_days: 0 });
+  const [diagnostics, setDiagnostics] = useState<any | null>(null);
 
   const load = useCallback(async () => {
     const [a, c, l] = await Promise.all([fetch('/api/accounts').then((r) => r.json()), fetch('/api/campaigns').then((r) => r.json()), fetch('/api/leads').then((r) => r.json())]);
@@ -78,6 +79,7 @@ export default function CampaignsPage() {
 
       <section className="rounded-xl border border-white/10 p-4">
         <p className="mb-2 text-sm font-medium">Campaign list</p>
+        <p className="mb-2 text-xs text-zinc-500">Dry run mode applies unless explicitly switched to live + enabled.</p>
         <div className="space-y-1 text-sm">
           {campaigns.map((c) => (
             <div key={c.id} className="flex items-center justify-between rounded border border-white/10 px-3 py-2">
@@ -85,11 +87,27 @@ export default function CampaignsPage() {
               <div className="flex gap-2">
                 <button className="rounded border border-white/20 px-2 py-1 text-xs" onClick={async () => { await fetch(`/api/campaigns/${c.id}/status`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ status: 'active' }) }); await load(); }}>Activate</button>
                 <button className="rounded border border-white/20 px-2 py-1 text-xs" onClick={async () => { await fetch(`/api/campaigns/${c.id}/status`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ status: 'paused' }) }); await load(); }}>Pause</button>
+                <button className="rounded border border-sky-400/30 px-2 py-1 text-xs text-sky-200" onClick={async () => {
+                  const apiKey = window.prompt('Enter API key for assist route (not stored):');
+                  if (!apiKey) return;
+                  const res = await fetch('/api/v1/assist/campaign-diagnostics', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': apiKey }, body: JSON.stringify({ campaignId: c.id }) });
+                  setDiagnostics(await res.json());
+                }}>Diagnose</button>
               </div>
             </div>
           ))}
         </div>
       </section>
+
+      {diagnostics ? (
+        <section className="rounded-xl border border-white/10 p-4 text-sm">
+          <div className="flex items-center justify-between">
+            <p className="font-medium">Campaign diagnostics ({diagnostics.mode})</p>
+            <button className="rounded border border-white/20 px-2 py-1 text-xs" onClick={() => navigator.clipboard.writeText(JSON.stringify(diagnostics, null, 2))}>Copy output</button>
+          </div>
+          <pre className="mt-2 whitespace-pre-wrap text-xs text-zinc-300">{JSON.stringify(diagnostics, null, 2)}</pre>
+        </section>
+      ) : null}
     </div>
   );
 }
