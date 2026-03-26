@@ -48,7 +48,8 @@ export default function HomePage() {
   return (
     <div className="space-y-6">
       <section className="panel relative overflow-hidden p-5">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_100%_0%,rgba(118,156,238,0.16),transparent_44%),radial-gradient(circle_at_0%_100%,rgba(196,153,90,0.1),transparent_38%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_100%_0%,rgba(118,156,238,0.18),transparent_44%),radial-gradient(circle_at_0%_100%,rgba(196,153,90,0.12),transparent_40%)]" />
+        <div className="absolute -right-16 -top-14 h-48 w-48 rounded-full border border-sky-300/15 bg-sky-400/5 blur-[1px]" />
         <div className="relative">
           <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Operator Surface</p>
           <h1 className="mt-1">Cold Email Cockpit</h1>

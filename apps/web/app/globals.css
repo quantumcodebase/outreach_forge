@@ -190,10 +190,20 @@
   }
 
   .metric-card {
-    @apply panel p-4;
+    @apply panel relative overflow-hidden p-4;
     background:
       linear-gradient(180deg, rgba(30, 42, 64, 0.76), rgba(14, 20, 32, 0.94)),
       radial-gradient(circle at 100% 0%, rgba(112, 145, 220, 0.14), transparent 44%);
+  }
+
+  .metric-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 16px;
+    right: 16px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(169, 194, 243, 0.45), transparent);
   }
 
   .shell-canvas {
