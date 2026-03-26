@@ -23,19 +23,19 @@ export default function SuppressionPage() {
   return (
     <div className="space-y-6">
       <h2>Suppression List</h2>
-      <section className="space-y-3 rounded-xl border border-white/10 p-4">
+      <section className="panel space-y-3 p-4">
         <div className="grid grid-cols-4 gap-2 text-sm">
-          <input className="rounded border border-white/15 bg-zinc-900 px-3 py-2" placeholder="Search email" value={q} onChange={(e) => setQ(e.target.value)} />
-          <button className="rounded border border-white/20 px-3 py-2" onClick={() => load()}>Search</button>
-          <input className="rounded border border-white/15 bg-zinc-900 px-3 py-2" placeholder="block@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input className="rounded border px-3 py-2" placeholder="Search email" value={q} onChange={(e) => setQ(e.target.value)} />
+          <button className="btn" onClick={() => load()}>Search</button>
+          <input className="rounded border px-3 py-2" placeholder="block@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
           <div className="flex gap-2">
-            <select className="rounded border border-white/15 bg-zinc-900 px-3 py-2" value={reason} onChange={(e) => setReason(e.target.value)}>
+            <select className="rounded border px-3 py-2" value={reason} onChange={(e) => setReason(e.target.value)}>
               <option value="manual">manual</option>
               <option value="unsubscribe">unsubscribe</option>
               <option value="bounce_hard">bounce_hard</option>
               <option value="complaint">complaint</option>
             </select>
-            <button className="rounded bg-white px-3 py-2 text-black" onClick={async () => {
+            <button className="btn btn-primary" onClick={async () => {
               await fetch('/api/suppression', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, reason }) });
               setEmail('');
               await load();
@@ -64,7 +64,7 @@ export default function SuppressionPage() {
             <td className="px-4 py-3 whitespace-nowrap text-zinc-300">{r.reason}</td>
             <td className="px-4 py-3 whitespace-nowrap text-zinc-400">{new Date(r.added_at).toLocaleString()}</td>
             <td className="px-4 py-3 whitespace-nowrap">
-              <button className="rounded border border-rose-500/30 px-2 py-1 text-xs text-rose-200 hover:bg-rose-500/10" onClick={async () => {
+              <button className="btn border-rose-500/30 bg-rose-500/10 px-2 py-1 text-xs text-rose-200" onClick={async () => {
                 if (!confirm('Remove suppression entry?')) return;
                 await fetch('/api/suppression', { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: r.id }) });
                 await load();
