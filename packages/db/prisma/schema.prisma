@@ -198,3 +198,21 @@ model events {
 
   @@index([type, created_at])
 }
+
+model wlr_runs {
+  run_id         String    @id @db.Text
+  project_id     String?   @db.Text
+  status         String?   @db.Text
+  started_at     DateTime? @db.Timestamptz(6)
+  ended_at       DateTime? @db.Timestamptz(6)
+  discovered     Int?
+  enriched       Int?
+  deduped        Int?
+  error          String?   @db.Text
+  notes          String?   @db.Text
+  raw            Json
+  last_synced_at DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([project_id, started_at])
+  @@index([status, started_at])
+}

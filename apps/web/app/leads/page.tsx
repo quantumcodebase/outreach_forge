@@ -26,14 +26,18 @@ export default function LeadsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkResult, setBulkResult] = useState<string | null>(null);
   const [leadBrief, setLeadBrief] = useState<any | null>(null);
+  const [wlrRuns, setWlrRuns] = useState<any[]>([]);
+  const [wlrStatus, setWlrStatus] = useState<string | null>(null);
 
   async function load() {
-    const [leadData, campaignData] = await Promise.all([
+    const [leadData, campaignData, runsData] = await Promise.all([
       fetch(`/api/leads?q=${encodeURIComponent(search)}&source=${source}`).then((r) => r.json()),
-      fetch('/api/campaigns').then((r) => r.json())
+      fetch('/api/campaigns').then((r) => r.json()),
+      fetch('/api/wlr/runs?projectId=intakevault').then((r) => r.json()).catch(() => ({ runs: [] }))
     ]);
     setLeads(leadData.leads || []);
     setCampaigns(campaignData.campaigns || []);
+    setWlrRuns(runsData.runs || []);
     setSelectedIds((prev) => prev.filter((id) => (leadData.leads || []).some((l: Lead) => l.id === id)));
     if (!selectedCampaign && campaignData.campaigns?.[0]?.id) setSelectedCampaign(campaignData.campaigns[0].id);
   }
@@ -67,6 +71,30 @@ export default function LeadsPage() {
     setLeadBrief(data);
   }
 
+  async function syncWlr() {
+    setWlrStatus('Syncing WLR into OutreachForge…');
+    const res = await fetch('/api/wlr/sync', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ projectId: 'intakevault' })
+    });
+    const data = await res.json();
+    setWlrStatus(`Synced runs ${data.runsSynced}, leads created ${data.created}, updated ${data.updated}, skipped(no email) ${data.skippedNoEmail}`);
+    await load();
+  }
+
+  async function runWlrSearch() {
+    setWlrStatus('Starting WLR run…');
+    const res = await fetch('/api/wlr/run', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ projectId: 'intakevault', targetMode: 'underserved' })
+    });
+    const data = await res.json();
+    setWlrStatus(`Run started: ${data.run?.run_id || 'unknown run id'}. Use Sync WLR after completion.`);
+    await load();
+  }
+
   return (
     <div className="space-y-6">
       <section className="panel relative overflow-hidden p-5">
@@ -96,6 +124,18 @@ export default function LeadsPage() {
               Create lead
             </button>
           </div>
+        </div>
+      </section>
+
+      <section className="panel p-4 text-sm space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button className="btn px-2 py-1" onClick={runWlrSearch}>Run WLR search</button>
+          <button className="btn px-2 py-1" onClick={syncWlr}>Sync WLR → OutreachForge</button>
+          {wlrStatus ? <span className="text-zinc-400">{wlrStatus}</span> : null}
+        </div>
+        <div className="text-xs text-zinc-500">
+          Recent WLR runs in Postgres visibility layer: {wlrRuns.length}
+          {wlrRuns[0] ? ` • latest ${wlrRuns[0].run_id} (${wlrRuns[0].status || 'unknown'})` : ''}
         </div>
       </section>
 
