@@ -53,23 +53,23 @@ export default function HomePage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4"><p className="text-xs uppercase tracking-wide text-zinc-500">Accounts</p><p className="mt-2 text-2xl font-semibold">{stats.accounts ?? '—'}</p></section>
-        <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4"><p className="text-xs uppercase tracking-wide text-zinc-500">Leads</p><p className="mt-2 text-2xl font-semibold">{stats.leads ?? '—'}</p><p className="text-xs text-zinc-500">WLR: {stats.wlrLeads ?? '—'}</p></section>
-        <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4"><p className="text-xs uppercase tracking-wide text-zinc-500">Campaigns</p><p className="mt-2 text-2xl font-semibold">{stats.activeCampaigns ?? '—'}</p><p className="text-xs text-zinc-500">active</p></section>
-        <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4"><p className="text-xs uppercase tracking-wide text-zinc-500">Mode</p><p className="mt-2 text-2xl font-semibold">{outMode === 'live' ? 'Live' : 'Dry run'}</p><p className="text-xs text-zinc-500">safe by default</p></section>
+        <section className="panel p-4"><p className="text-xs uppercase tracking-wide text-zinc-500">Accounts</p><p className="mt-2 text-2xl font-semibold">{stats.accounts ?? '—'}</p></section>
+        <section className="panel p-4"><p className="text-xs uppercase tracking-wide text-zinc-500">Leads</p><p className="mt-2 text-2xl font-semibold">{stats.leads ?? '—'}</p><p className="text-xs text-zinc-500">WLR: {stats.wlrLeads ?? '—'}</p></section>
+        <section className="panel p-4"><p className="text-xs uppercase tracking-wide text-zinc-500">Campaigns</p><p className="mt-2 text-2xl font-semibold">{stats.activeCampaigns ?? '—'}</p><p className="text-xs text-zinc-500">active</p></section>
+        <section className="panel p-4"><p className="text-xs uppercase tracking-wide text-zinc-500">Mode</p><p className="mt-2 text-2xl font-semibold">{outMode === 'live' ? 'Live' : 'Dry run'}</p><p className="text-xs text-zinc-500">safe by default</p></section>
       </div>
 
-      <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-sm">
+      <section className="panel p-4 text-sm">
         <p className="font-medium">Quick links</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Link href="/accounts" className="rounded-md border border-white/20 px-3 py-1.5 hover:bg-white/10">IONOS proof flow</Link>
-          <Link href="/leads" className="rounded-md border border-white/20 px-3 py-1.5 hover:bg-white/10">Leads + WLR imports</Link>
-          <Link href="/campaigns" className="rounded-md border border-white/20 px-3 py-1.5 hover:bg-white/10">Campaign enrollments</Link>
-          <Link href="/inbox" className="rounded-md border border-white/20 px-3 py-1.5 hover:bg-white/10">Inbox + assist</Link>
+          <Link href="/accounts" className="btn px-3 py-1.5">IONOS proof flow</Link>
+          <Link href="/leads" className="btn px-3 py-1.5">Leads + WLR imports</Link>
+          <Link href="/campaigns" className="btn px-3 py-1.5">Campaign enrollments</Link>
+          <Link href="/inbox" className="btn px-3 py-1.5">Inbox + assist</Link>
         </div>
       </section>
 
-      <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+      <section className="panel p-4">
         <p className="text-xs uppercase tracking-wide text-zinc-500">System</p>
         <div className="mt-3 space-y-2 text-sm">
           <p className="flex items-center justify-between"><span>Web API</span><span className="text-emerald-300">online</span></p>

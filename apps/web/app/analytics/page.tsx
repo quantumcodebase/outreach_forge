@@ -25,16 +25,16 @@ export default function AnalyticsPage() {
           ['Soft bounces', data?.kpis.bounce_soft ?? 0],
           ['Unsubs', data?.kpis.unsubscribe ?? 0]
         ].map(([label, value]) => (
-          <div key={String(label)} className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div key={String(label)} className="panel p-4">
             <p className="text-xs uppercase text-zinc-500">{label}</p>
             <p className="mt-2 text-2xl font-semibold">{value}</p>
           </div>
         ))}
       </div>
 
-      <div className="rounded-xl border border-white/10 overflow-hidden">
+      <div className="panel overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-white/[0.03] text-zinc-400">
+          <thead className="border-b border-white/10 bg-white/[0.03] text-zinc-400">
             <tr>
               <th className="px-3 py-2 text-left">Campaign</th>
               <th className="px-3 py-2 text-left">Sent</th>
@@ -44,7 +44,7 @@ export default function AnalyticsPage() {
               <th className="px-3 py-2 text-left">Unsubs</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="[&>tr]:transition-colors [&>tr:hover]:bg-white/[0.02]">
             {data?.campaigns.map((c) => (
               <tr key={c.campaign_id} className="border-t border-white/10">
                 <td className="px-3 py-2">{c.campaign_name}</td>
