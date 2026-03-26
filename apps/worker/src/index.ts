@@ -5,6 +5,7 @@ import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { runCampaignSend, runSchedulerTick } from './scheduler';
 import { processInboundClassification } from './inbound';
+import { runWlrSchedulerTick } from './wlr-scheduler';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required');
@@ -291,8 +292,9 @@ async function main() {
   await boss.work('scheduler-tick', async () => {
     try {
       await runSchedulerTick(async (enrollmentId, stepId) => {
-      await boss.send('campaign-send', { enrollmentId, stepId });
-    });
+        await boss.send('campaign-send', { enrollmentId, stepId });
+      });
+      await runWlrSchedulerTick();
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       console.error('[worker] scheduler tick failed', redact(msg));

@@ -30,6 +30,11 @@ type RecipeRow = {
   last_run_at: string | null;
   last_sync_at: string | null;
   settings_json: Record<string, unknown>;
+  next_run_at: string | null;
+  last_run_origin: string | null;
+  last_success_at: string | null;
+  last_failure_at: string | null;
+  last_failure_message: string | null;
   sync_state?: {
     last_synced_run_id: string | null;
     last_synced_at: string | null;
@@ -43,6 +48,7 @@ export default function WlrRunsPage() {
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [recipes, setRecipes] = useState<RecipeRow[]>([]);
   const [summary, setSummary] = useState<any>(null);
+  const [schedulerState, setSchedulerState] = useState<any>(null);
   const [status, setStatus] = useState<string>('');
   const [projectId, setProjectId] = useState('intakevault');
 
@@ -55,6 +61,7 @@ export default function WlrRunsPage() {
     setRuns(runsRes.runs || []);
     setRecipes(recipesRes.recipes || []);
     setSummary(summaryRes || null);
+    setSchedulerState(recipesRes.schedulerState || summaryRes?.scheduler || null);
   }
 
   async function runNow(recipe: RecipeRow) {
@@ -77,6 +84,17 @@ export default function WlrRunsPage() {
     await load();
   }
 
+  async function toggleEnabled(recipe: RecipeRow) {
+    const enabled = !recipe.enabled;
+    setStatus(`${enabled ? 'Enabling' : 'Disabling'} ${recipe.name}…`);
+    await fetch(`/api/wlr/recipes/${recipe.id}/toggle`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ enabled })
+    });
+    await load();
+  }
+
   useEffect(() => {
     load();
   }, [projectId]);
@@ -95,18 +113,20 @@ export default function WlrRunsPage() {
           <input className="control w-56" value={projectId} onChange={(e) => setProjectId(e.target.value)} />
           <button className="btn px-2 py-1" onClick={load}>Refresh board</button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-2 text-sm">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-2 text-sm">
           <div className="panel-subtle p-2">Recipes: <b>{summary?.totalRecipes ?? recipes.length}</b></div>
           <div className="panel-subtle p-2">Active: <b>{summary?.activeRecipes ?? recipes.filter((r) => r.enabled).length}</b></div>
+          <div className="panel-subtle p-2">Auto-scheduled: <b>{summary?.activeScheduledRecipes ?? 0}</b></div>
           <div className="panel-subtle p-2">Runs (24h): <b>{summary?.runsRecent ?? 0}</b></div>
           <div className="panel-subtle p-2">Last sync: <b>{summary?.lastSyncAt || latestSync || '—'}</b></div>
           <div className="panel-subtle p-2">New WLR leads (24h): <b>{summary?.newWlrLeads24h ?? 0}</b></div>
         </div>
+        <div className="text-xs text-zinc-500">Scheduler timezone: America/Puerto_Rico (stored timestamps in UTC). Last tick: {schedulerState?.last_tick_at || schedulerState?.lastTickAt || '—'} {schedulerState?.last_tick_ok === false || schedulerState?.ok === false ? `• error: ${schedulerState?.last_error || schedulerState?.lastError}` : ''}</div>
         {status ? <p className="text-sm text-zinc-400">{status}</p> : null}
       </section>
 
       <section className="panel p-0 overflow-auto">
-        <table className="w-full min-w-[1350px] text-sm">
+        <table className="w-full min-w-[1650px] text-sm">
           <thead className="border-b border-white/10 text-zinc-400">
             <tr>
               <th className="px-3 py-2 text-left">Recipe</th>
@@ -116,10 +136,14 @@ export default function WlrRunsPage() {
               <th className="px-3 py-2 text-left">Geo</th>
               <th className="px-3 py-2 text-left">Cadence</th>
               <th className="px-3 py-2 text-left">Enabled</th>
+              <th className="px-3 py-2 text-left">Status</th>
               <th className="px-3 py-2 text-left">Threshold</th>
               <th className="px-3 py-2 text-left">Cap</th>
+              <th className="px-3 py-2 text-left">Next run (UTC)</th>
               <th className="px-3 py-2 text-left">Last run</th>
+              <th className="px-3 py-2 text-left">Origin</th>
               <th className="px-3 py-2 text-left">Last sync</th>
+              <th className="px-3 py-2 text-left">Last result</th>
               <th className="px-3 py-2 text-left">Actions</th>
             </tr>
           </thead>
@@ -133,12 +157,17 @@ export default function WlrRunsPage() {
                 <td className="px-3 py-2">{recipe.geography_label}</td>
                 <td className="px-3 py-2">{recipe.cadence_type}</td>
                 <td className="px-3 py-2">{recipe.enabled ? 'yes' : 'no'}</td>
+                <td className="px-3 py-2">{!recipe.enabled ? 'disabled' : recipe.cadence_type === 'manual' ? 'manual' : recipe.cadence_type === 'paused' ? 'paused' : 'scheduled'}</td>
                 <td className="px-3 py-2">{recipe.confidence_threshold}</td>
                 <td className="px-3 py-2">{recipe.lead_cap}</td>
+                <td className="px-3 py-2">{recipe.next_run_at || '—'}</td>
                 <td className="px-3 py-2">{recipe.last_run_at || '—'}</td>
+                <td className="px-3 py-2">{recipe.last_run_origin || '—'}</td>
                 <td className="px-3 py-2">{recipe.last_sync_at || recipe.sync_state?.last_synced_at || '—'}</td>
+                <td className="px-3 py-2 text-xs">{recipe.last_failure_at ? `failed ${recipe.last_failure_at}` : recipe.last_success_at ? `ok ${recipe.last_success_at}` : '—'}{recipe.last_failure_message ? ` • ${recipe.last_failure_message}` : ''}</td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
+                    <button className="btn px-2 py-1" onClick={() => toggleEnabled(recipe)}>{recipe.enabled ? 'Disable' : 'Enable'}</button>
                     <button className="btn px-2 py-1" onClick={() => runNow(recipe)}>Run now</button>
                     <button className="btn px-2 py-1" onClick={() => syncNow(recipe)}>Sync now</button>
                   </div>
@@ -187,12 +216,14 @@ export default function WlrRunsPage() {
       </section>
 
       <section className="panel p-4 text-sm">
-        <h3 className="text-lg mb-2">Sync summary</h3>
+        <h3 className="text-lg mb-2">Sync & scheduler summary</h3>
         <p>Last sync: {summary?.lastSyncAt || '—'}</p>
         <p>
           Counts: created {summary?.lastSyncCounts?.created ?? 0}, updated {summary?.lastSyncCounts?.updated ?? 0}, skipped {summary?.lastSyncCounts?.skipped ?? 0}
           {summary?.lastSyncCounts?.runId ? ` • run ${summary.lastSyncCounts.runId}` : ''}
         </p>
+        <p>Scheduler tick: {summary?.scheduler?.lastTickAt || schedulerState?.last_tick_at || '—'} ({summary?.scheduler?.ok === false || schedulerState?.last_tick_ok === false ? 'error' : 'ok'})</p>
+        {(summary?.scheduler?.lastError || schedulerState?.last_error) ? <p>Scheduler error: {summary?.scheduler?.lastError || schedulerState?.last_error}</p> : null}
       </section>
     </div>
   );

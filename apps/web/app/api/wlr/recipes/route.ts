@@ -7,7 +7,10 @@ export async function GET(req: Request) {
   const projectId = searchParams.get('projectId') || DEFAULT_PROJECT_ID;
   const recipes = await getRecipes(projectId);
 
-  const syncStates = await prisma.wlr_sync_state.findMany({ where: { project_id: projectId } });
+  const [syncStates, schedulerState] = await Promise.all([
+    prisma.wlr_sync_state.findMany({ where: { project_id: projectId } }),
+    prisma.wlr_scheduler_state.findUnique({ where: { project_id: projectId } })
+  ]);
   const syncByRecipe = new Map(syncStates.map((s) => [s.recipe_id || '', s]));
 
   const merged = recipes.map((r) => ({
@@ -15,5 +18,5 @@ export async function GET(req: Request) {
     sync_state: syncByRecipe.get(r.id) || null
   }));
 
-  return NextResponse.json({ recipes: merged });
+  return NextResponse.json({ recipes: merged, schedulerState });
 }

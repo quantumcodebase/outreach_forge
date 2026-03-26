@@ -36,7 +36,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ recipeI
     }
   });
 
-  await prisma.wlr_search_recipes.update({ where: { id: recipe.id }, data: { last_sync_at: new Date() } });
+  await prisma.wlr_search_recipes.update({ where: { id: recipe.id }, data: { last_sync_at: new Date(), last_success_at: new Date(), last_failure_at: null, last_failure_message: null } });
 
   return NextResponse.json({ ok: true, recipeId: recipe.id, ...result });
 }

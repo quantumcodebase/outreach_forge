@@ -20,7 +20,16 @@ export async function POST(_req: Request, { params }: { params: Promise<{ recipe
 
   const run = await triggerWlrRun(payload);
   if (run?.ok) {
-    await prisma.wlr_search_recipes.update({ where: { id: recipe.id }, data: { last_run_at: new Date() } });
+    await prisma.wlr_search_recipes.update({
+      where: { id: recipe.id },
+      data: {
+        last_run_at: new Date(),
+        last_run_origin: 'manual',
+        last_success_at: new Date(),
+        last_failure_at: null,
+        last_failure_message: null,
+      }
+    });
   }
 
   return NextResponse.json({ ok: true, run, recipeId: recipe.id });

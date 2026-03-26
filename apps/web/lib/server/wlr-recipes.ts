@@ -39,8 +39,6 @@ export async function ensureRecipeSeeds(projectId = DEFAULT_PROJECT_ID) {
         icp_label: seed.icp_label,
         workflow_label: seed.workflow_label,
         geography_label: seed.geography_label,
-        cadence_type: seed.cadence_type,
-        enabled: seed.enabled,
         confidence_threshold: seed.confidence_threshold,
         lead_cap: seed.lead_cap,
         settings_json: seed.settings_json as any
