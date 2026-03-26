@@ -145,8 +145,8 @@ export default function InboxPage() {
 
   return (
     <div className="grid min-h-[72vh] grid-cols-12 gap-4">
-      <section className="panel col-span-5">
-        <div className="space-y-3 border-b border-white/10 p-3">
+      <section className="panel col-span-5 overflow-hidden">
+        <div className="space-y-3 border-b border-slate-300/10 bg-[linear-gradient(180deg,rgba(31,44,67,0.52),rgba(18,26,40,0.6))] p-3">
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search threads" className="control w-full" />
           <div className="flex items-center gap-1">
             {(['All', 'Unread'] as const).map((v) => (
@@ -180,16 +180,16 @@ export default function InboxPage() {
               <button
                 key={t.threadId}
                 onClick={() => setSelectedThreadId(t.threadId)}
-                className={`mb-1.5 w-full rounded-lg border px-3 py-2.5 text-left transition ${selectedThreadId === t.threadId ? 'border-sky-300/35 bg-sky-500/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]' : 'border-white/10 hover:border-white/20 hover:bg-white/[0.04]'}`}
+                className={`mb-1.5 w-full rounded-xl border px-3 py-2.5 text-left transition ${selectedThreadId === t.threadId ? 'border-sky-300/35 bg-[linear-gradient(180deg,rgba(83,117,199,0.22),rgba(34,50,82,0.26))] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_10px_24px_rgba(18,31,61,0.45)]' : 'border-slate-300/10 bg-[linear-gradient(180deg,rgba(23,33,50,0.44),rgba(16,24,36,0.6))] hover:border-slate-300/20 hover:bg-[linear-gradient(180deg,rgba(37,51,76,0.56),rgba(19,27,40,0.72))]'}`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="truncate text-sm font-semibold">{t.subject}</p>
+                  <p className="truncate text-sm font-semibold text-slate-100">{t.subject}</p>
                   <span className="text-xs text-zinc-500">{t.received_at ? new Date(t.received_at).toLocaleTimeString() : '-'}</span>
                 </div>
                 <p className="mt-0.5 text-xs text-zinc-300">{t.from} {t.unread ? <span className="text-sky-300">• unread</span> : null}</p>
                 <p className="mt-1 line-clamp-2 text-xs text-zinc-400">{t.preview}</p>
                 <div className="mt-2 flex items-center justify-between">
-                  <span className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] text-zinc-300">{t.account}</span>
+                  <span className="chip px-2 py-0.5 text-[10px]">{t.account}</span>
                   {t.label ? <span className="text-[10px] text-zinc-400">{t.label}</span> : null}
                 </div>
               </button>
@@ -216,19 +216,19 @@ export default function InboxPage() {
             </div>
             <div className="max-h-[45vh] space-y-2 overflow-y-auto pr-1">
               {messages.map((m) => (
-                <article key={m.id} className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                <article key={m.id} className="rounded-xl border border-slate-300/15 bg-[linear-gradient(180deg,rgba(31,44,66,0.52),rgba(16,23,36,0.72))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                   <div className="mb-1 flex items-center justify-between text-xs text-zinc-400">
                     <StatusBadge status={m.direction === 'received' ? 'active' : 'paused'} />
                     <span>{m.received_at || m.sent_at ? new Date((m.received_at || m.sent_at) as string).toLocaleString() : '-'}</span>
                   </div>
-                  <p className="text-sm font-medium">{m.subject || '(no subject)'}</p>
+                  <p className="text-sm font-medium text-slate-100">{m.subject || '(no subject)'}</p>
                   <p className="mt-1 text-sm text-zinc-300">{m.body_preview || ''}</p>
                 </article>
               ))}
             </div>
             <div className="panel-subtle space-y-2 p-3">
               <p className="text-sm font-semibold">Reply</p>
-              <textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="w-full rounded-md border p-2 text-sm h-32" />
+              <textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="control h-32 w-full py-2 text-sm" />
               <button onClick={sendReply} disabled={sending} className="btn btn-primary disabled:opacity-60">{sending ? 'Sending…' : 'Send'}</button>
             </div>
             {assistOutput ? (

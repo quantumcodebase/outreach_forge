@@ -31,68 +31,80 @@ export default function CampaignsPage() {
 
   return (
     <div className="space-y-6">
-      <h2>Campaigns</h2>
+      <section className="panel relative overflow-hidden p-5">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_100%_0%,rgba(110,149,233,0.16),transparent_44%),radial-gradient(circle_at_0%_100%,rgba(194,150,90,0.12),transparent_40%)]" />
+        <div className="relative">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Sequencing Control</p>
+          <h2 className="mt-1 text-xl">Campaigns</h2>
+          <p className="mt-1 text-sm text-slate-300">Configure campaign rails, steps, and enrollments with dry-run-safe operations.</p>
+        </div>
+      </section>
 
       <section className="panel space-y-3 p-4">
-        <p className="text-sm font-medium">Create campaign</p>
-        <div className="grid grid-cols-3 gap-2 text-sm">
-          <input className="rounded border px-3 py-2" placeholder="Campaign name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-          <select className="rounded border px-3 py-2" value={form.from_account_id} onChange={(e) => setForm((f) => ({ ...f, from_account_id: e.target.value }))}>
+        <p className="text-sm font-semibold text-slate-100">Create campaign</p>
+        <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
+          <input className="control" placeholder="Campaign name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          <select className="control" value={form.from_account_id} onChange={(e) => setForm((f) => ({ ...f, from_account_id: e.target.value }))}>
             {accounts.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
           </select>
-          <input type="number" className="rounded border px-3 py-2" value={form.daily_cap} onChange={(e) => setForm((f) => ({ ...f, daily_cap: Number(e.target.value || 50) }))} />
-          <input className="rounded border px-3 py-2" value={form.sending_window_start} onChange={(e) => setForm((f) => ({ ...f, sending_window_start: e.target.value }))} />
-          <input className="rounded border px-3 py-2" value={form.sending_window_end} onChange={(e) => setForm((f) => ({ ...f, sending_window_end: e.target.value }))} />
-          <button className="btn btn-primary" onClick={async () => { await fetch('/api/campaigns', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(form) }); await load(); }}>Create</button>
+          <input type="number" className="control" value={form.daily_cap} onChange={(e) => setForm((f) => ({ ...f, daily_cap: Number(e.target.value || 50) }))} />
+          <input className="control" value={form.sending_window_start} onChange={(e) => setForm((f) => ({ ...f, sending_window_start: e.target.value }))} />
+          <input className="control" value={form.sending_window_end} onChange={(e) => setForm((f) => ({ ...f, sending_window_end: e.target.value }))} />
+          <button className="btn btn-primary" onClick={async () => { await fetch('/api/campaigns', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(form) }); await load(); }}>Create campaign</button>
         </div>
       </section>
 
       <section className="panel space-y-3 p-4">
-        <p className="text-sm font-medium">Add / update step</p>
-        <div className="grid grid-cols-5 gap-2 text-sm">
-          <select className="rounded border px-3 py-2" value={selectedCampaign} onChange={(e) => setSelectedCampaign(e.target.value)}>
+        <p className="text-sm font-semibold text-slate-100">Add / update step</p>
+        <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-5">
+          <select className="control" value={selectedCampaign} onChange={(e) => setSelectedCampaign(e.target.value)}>
             <option value="">Select campaign</option>
             {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-          <input type="number" className="rounded border px-3 py-2" value={step.step_number} onChange={(e) => setStep((s) => ({ ...s, step_number: Number(e.target.value) }))} />
-          <input className="rounded border px-3 py-2" value={step.subject_template} onChange={(e) => setStep((s) => ({ ...s, subject_template: e.target.value }))} />
-          <input type="number" className="rounded border px-3 py-2" value={step.delay_days} onChange={(e) => setStep((s) => ({ ...s, delay_days: Number(e.target.value || 0) }))} />
+          <input type="number" className="control" value={step.step_number} onChange={(e) => setStep((s) => ({ ...s, step_number: Number(e.target.value) }))} />
+          <input className="control" value={step.subject_template} onChange={(e) => setStep((s) => ({ ...s, subject_template: e.target.value }))} />
+          <input type="number" className="control" value={step.delay_days} onChange={(e) => setStep((s) => ({ ...s, delay_days: Number(e.target.value || 0) }))} />
           <button disabled={!selectedCampaign} className="btn disabled:opacity-60" onClick={async () => { await fetch(`/api/campaigns/${selectedCampaign}/steps`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(step) }); }}>Save step</button>
         </div>
-        <textarea className="h-24 w-full rounded border px-3 py-2 text-sm" value={step.body_template} onChange={(e) => setStep((s) => ({ ...s, body_template: e.target.value }))} />
+        <textarea className="control h-24 w-full py-2" value={step.body_template} onChange={(e) => setStep((s) => ({ ...s, body_template: e.target.value }))} />
       </section>
 
       <section className="panel space-y-3 p-4">
-        <p className="text-sm font-medium">Enroll lead</p>
-        <div className="grid grid-cols-3 gap-2 text-sm">
-          <select className="rounded border px-3 py-2" value={selectedCampaign} onChange={(e) => setSelectedCampaign(e.target.value)}>
+        <p className="text-sm font-semibold text-slate-100">Enroll lead</p>
+        <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
+          <select className="control" value={selectedCampaign} onChange={(e) => setSelectedCampaign(e.target.value)}>
             <option value="">Select campaign</option>
             {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-          <select className="rounded border px-3 py-2" value={selectedLead} onChange={(e) => setSelectedLead(e.target.value)}>
+          <select className="control" value={selectedLead} onChange={(e) => setSelectedLead(e.target.value)}>
             <option value="">Select lead</option>
             {leads.map((l) => <option key={l.id} value={l.id}>{l.email}</option>)}
           </select>
-          <button disabled={!selectedCampaign || !selectedLead} className="btn disabled:opacity-60" onClick={async () => { await fetch('/api/enrollments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ campaignId: selectedCampaign, leadIds: [selectedLead] }) }); await load(); }}>Enroll</button>
+          <button disabled={!selectedCampaign || !selectedLead} className="btn disabled:opacity-60" onClick={async () => { await fetch('/api/enrollments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ campaignId: selectedCampaign, leadIds: [selectedLead] }) }); await load(); }}>Enroll lead</button>
         </div>
       </section>
 
       <section className="panel p-4">
-        <p className="mb-2 text-sm font-medium">Campaign list</p>
-        <p className="mb-2 text-xs text-zinc-500">Dry run mode applies unless explicitly switched to live + enabled.</p>
-        <div className="space-y-1 text-sm">
+        <p className="mb-1 text-sm font-semibold">Campaign list</p>
+        <p className="mb-3 text-xs text-zinc-500">Dry run mode applies unless explicitly switched to live + enabled.</p>
+        <div className="space-y-2 text-sm">
           {campaigns.map((c) => (
-            <div key={c.id} className="flex items-center justify-between rounded border border-white/10 bg-white/[0.02] px-3 py-2">
-              <div>{c.name} <span className="text-zinc-500">({c.status})</span></div>
-              <div className="flex gap-2">
-                <button className="btn px-2 py-1 text-xs" onClick={async () => { await fetch(`/api/campaigns/${c.id}/status`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ status: 'active' }) }); await load(); }}>Activate</button>
-                <button className="btn px-2 py-1 text-xs" onClick={async () => { await fetch(`/api/campaigns/${c.id}/status`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ status: 'paused' }) }); await load(); }}>Pause</button>
-                <button className="btn border-sky-400/30 bg-sky-500/10 px-2 py-1 text-xs text-sky-200" onClick={async () => {
-                  const apiKey = window.prompt('Enter API key for assist route (not stored):');
-                  if (!apiKey) return;
-                  const res = await fetch('/api/v1/assist/campaign-diagnostics', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': apiKey }, body: JSON.stringify({ campaignId: c.id }) });
-                  setDiagnostics(await res.json());
-                }}>Diagnose</button>
+            <div key={c.id} className="rounded-xl border border-slate-300/15 bg-[linear-gradient(180deg,rgba(28,39,59,0.62),rgba(18,25,37,0.8))] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="font-medium text-slate-100">{c.name}</div>
+                  <div className="text-xs text-slate-400">{c.status} • daily cap {c.daily_cap}</div>
+                </div>
+                <div className="flex gap-2">
+                  <button className="btn px-2 py-1 text-xs" onClick={async () => { await fetch(`/api/campaigns/${c.id}/status`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ status: 'active' }) }); await load(); }}>Activate</button>
+                  <button className="btn px-2 py-1 text-xs" onClick={async () => { await fetch(`/api/campaigns/${c.id}/status`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ status: 'paused' }) }); await load(); }}>Pause</button>
+                  <button className="btn border-sky-400/30 bg-sky-500/10 px-2 py-1 text-xs text-sky-200" onClick={async () => {
+                    const apiKey = window.prompt('Enter API key for assist route (not stored):');
+                    if (!apiKey) return;
+                    const res = await fetch('/api/v1/assist/campaign-diagnostics', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': apiKey }, body: JSON.stringify({ campaignId: c.id }) });
+                    setDiagnostics(await res.json());
+                  }}>Diagnose</button>
+                </div>
               </div>
             </div>
           ))}

@@ -69,26 +69,33 @@ export default function LeadsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="panel space-y-3 p-4">
-        <p className="text-sm font-medium">Create lead</p>
-        <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
-          <input className="rounded border px-3 py-2" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <input className="rounded border px-3 py-2" placeholder="First name (optional)" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-          <button
-            className="btn btn-primary"
-            onClick={async () => {
-              await fetch('/api/leads', {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ email, first_name: firstName })
-              });
-              setEmail('');
-              setFirstName('');
-              await load();
-            }}
-          >
-            Create
-          </button>
+      <section className="panel relative overflow-hidden p-5">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_100%_0%,rgba(125,160,230,0.16),transparent_44%),radial-gradient(circle_at_0%_100%,rgba(194,150,90,0.1),transparent_40%)]" />
+        <div className="relative grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_2fr]">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Lead Intake</p>
+            <h2 className="mt-1 text-xl">Create lead</h2>
+            <p className="mt-1 text-sm text-slate-300">Add direct prospects or import from Warm Lead Radar, then enroll in active campaigns.</p>
+          </div>
+          <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
+            <input className="control" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input className="control" placeholder="First name (optional)" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            <button
+              className="btn btn-primary"
+              onClick={async () => {
+                await fetch('/api/leads', {
+                  method: 'POST',
+                  headers: { 'content-type': 'application/json' },
+                  body: JSON.stringify({ email, first_name: firstName })
+                });
+                setEmail('');
+                setFirstName('');
+                await load();
+              }}
+            >
+              Create lead
+            </button>
+          </div>
         </div>
       </section>
 
@@ -131,21 +138,21 @@ export default function LeadsPage() {
           return (
             <tr key={lead.id}>
               <td className="px-4 py-3"><input type="checkbox" checked={selectedIds.includes(lead.id)} onChange={() => toggleLead(lead.id)} /></td>
-              <td className="px-4 py-3">{lead.email}</td>
+              <td className="px-4 py-3 text-slate-100">{lead.email}</td>
               <td className="px-4 py-3 text-zinc-300">{lead.company || '—'}</td>
               <td className="px-4 py-3 text-xs">
-                {isWlr ? <span className="rounded border border-sky-400/30 px-2 py-1 text-sky-200">WLR</span> : <span className="text-zinc-500">manual</span>}
+                {isWlr ? <span className="chip border-sky-400/30 bg-sky-500/15 px-2 py-1 text-sky-200">WLR</span> : <span className="text-zinc-500">manual</span>}
                 {isWlr && wlrMeta.search_id ? <span className="ml-2 text-zinc-500">search {String(wlrMeta.search_id)}</span> : null}
                 {isWlr ? <div className="mt-1 text-zinc-500">score {String(wlrMeta.score ?? 'n/a')} • snippets {Array.isArray(wlrMeta.snippets) ? wlrMeta.snippets.length : 0}</div> : null}
               </td>
-              <td className="px-4 py-3 text-zinc-400">{lead.status}</td>
+              <td className="px-4 py-3 text-zinc-300">{lead.status}</td>
               <td className="px-4 py-3"><button className="btn px-2 py-1 text-xs" onClick={() => runLeadBrief(lead.id)}>Lead brief</button></td>
             </tr>
           );
         })}
       </DataTable>
 
-      {bulkResult ? <p className="text-sm text-zinc-300">{bulkResult}</p> : null}
+      {bulkResult ? <p className="text-sm text-slate-300">{bulkResult}</p> : null}
       {leadBrief ? (
         <section className="panel p-4 text-sm">
           <div className="flex items-center justify-between">
@@ -155,7 +162,7 @@ export default function LeadsPage() {
           <p className="mt-2 text-zinc-300">{leadBrief.summary}</p>
         </section>
       ) : (
-        <section className="panel-subtle p-4 text-sm text-zinc-500">No analysis yet. Generate a thread analysis or reply draft.</section>
+        <section className="panel-subtle p-4 text-sm text-zinc-500">No analysis yet. Generate a lead brief to evaluate fit and personalization cues.</section>
       )}
     </div>
   );
