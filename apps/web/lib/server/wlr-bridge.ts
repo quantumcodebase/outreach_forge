@@ -27,11 +27,28 @@ type WlrRunRow = {
   notes?: string;
 };
 
+type SyncOptions = {
+  fullResync?: boolean;
+  minEmailConfidence?: number;
+};
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+const BAD_EXACT_EMAILS = new Set(['first.last@company.com', 'example@domain.com', 'user@domain.com']);
+const BAD_LOCAL_RE = /(logo|image|sprite|banner|header|footer|icon|screenshot|favicon|thumb|thumbnail|homeaway|fancybox|@2x|@3x).*(png|jpg|jpeg|gif|svg|webp)$/i;
 
 function normalizeEmail(email?: string | null) {
   const value = String(email || '').trim().toLowerCase();
-  return EMAIL_RE.test(value) ? value : null;
+  if (!EMAIL_RE.test(value)) return null;
+  return value;
+}
+
+function isLowQualityEmail(email: string) {
+  if (BAD_EXACT_EMAILS.has(email)) return true;
+  const [local, domain] = email.split('@');
+  if (!local || !domain) return true;
+  if (BAD_LOCAL_RE.test(local)) return true;
+  if (domain === 'example.com' || domain === 'domain.com' || domain.endsWith('.local')) return true;
+  return false;
 }
 
 function baseUrl(env: string, fallback: string) {
@@ -44,18 +61,64 @@ async function fetchJson<T>(url: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-export async function syncWlrProject(projectId: string) {
+export async function syncWlrProject(projectId: string, opts: SyncOptions = {}) {
   const wlrWebUrl = baseUrl('WLR_WEB_URL', 'http://127.0.0.1:3005');
-  const runsRes = await fetchJson<{ runs: WlrRunRow[] }>(`${wlrWebUrl}/api/runs?project=${encodeURIComponent(projectId)}&limit=50`);
-  const leadsRes = await fetchJson<{ leads: WlrLeadRow[] }>(
-    `${wlrWebUrl}/api/leads?project=${encodeURIComponent(projectId)}&mode=all&all_history=1&limit=5000`
-  );
+  const minEmailConfidence = Number.isFinite(opts.minEmailConfidence)
+    ? Math.max(0, Number(opts.minEmailConfidence))
+    : Number(process.env.WLR_MIN_EMAIL_CONFIDENCE || 60);
+
+  const runsRes = await fetchJson<{ runs: WlrRunRow[] }>(`${wlrWebUrl}/api/runs?project=${encodeURIComponent(projectId)}&limit=100`);
+  const runs = runsRes.runs || [];
+
+  const latestSyncedRun = await prisma.wlr_runs.findFirst({
+    where: { project_id: projectId },
+    orderBy: [{ started_at: 'desc' }, { last_synced_at: 'desc' }],
+    select: { started_at: true, run_id: true }
+  });
+
+  const watermark = latestSyncedRun?.started_at ?? null;
+  const incremental = !opts.fullResync;
+  const runsToSync = incremental
+    ? runs.filter((run) => {
+        if (!watermark) return true;
+        if (!run.started_at) return true;
+        return new Date(run.started_at) > watermark;
+      })
+    : runs;
+
+  let leads: WlrLeadRow[] = [];
+
+  if (opts.fullResync || !watermark) {
+    const leadsRes = await fetchJson<{ leads: WlrLeadRow[] }>(
+      `${wlrWebUrl}/api/leads?project=${encodeURIComponent(projectId)}&mode=all&all_history=1&limit=5000`
+    );
+    leads = leadsRes.leads || [];
+  } else {
+    const runLeadSets = await Promise.all(
+      runsToSync.slice(0, 20).map(async (run) => {
+        const res = await fetchJson<{ leads: WlrLeadRow[] }>(
+          `${wlrWebUrl}/api/leads?project=${encodeURIComponent(projectId)}&mode=all&run=${encodeURIComponent(run.run_id)}&limit=5000`
+        );
+        return res.leads || [];
+      })
+    );
+    const byEmailOrLeadId = new Map<string, WlrLeadRow>();
+    for (const set of runLeadSets) {
+      for (const row of set) {
+        const key = `${row.email_best || ''}::${row.lead_id || ''}`;
+        byEmailOrLeadId.set(key, row);
+      }
+    }
+    leads = Array.from(byEmailOrLeadId.values());
+  }
 
   let created = 0;
   let updated = 0;
   let skippedNoEmail = 0;
+  let skippedLowConfidence = 0;
+  let skippedLowQualityEmail = 0;
 
-  for (const run of runsRes.runs || []) {
+  for (const run of runs) {
     await prisma.wlr_runs.upsert({
       where: { run_id: run.run_id },
       create: {
@@ -87,10 +150,18 @@ export async function syncWlrProject(projectId: string) {
     });
   }
 
-  for (const row of leadsRes.leads || []) {
+  for (const row of leads) {
     const email = normalizeEmail(row.email_best);
     if (!email) {
       skippedNoEmail += 1;
+      continue;
+    }
+    if ((row.email_confidence ?? 0) < minEmailConfidence) {
+      skippedLowConfidence += 1;
+      continue;
+    }
+    if (isLowQualityEmail(email)) {
+      skippedLowQualityEmail += 1;
       continue;
     }
 
@@ -113,7 +184,7 @@ export async function syncWlrProject(projectId: string) {
           first_name: row.name || null,
           company: row.domain || null,
           city: row.city || null,
-          tags: ['source:wlr', `wlr:project:${projectId}`],
+          tags: ['source:wlr', `wlr:project:${projectId}`, row.last_run_id ? `wlr:run:${row.last_run_id}` : ''].filter(Boolean) as string[],
           custom_fields: { wlr: wlrMeta } as any,
           status: 'active'
         }
@@ -122,7 +193,9 @@ export async function syncWlrProject(projectId: string) {
       continue;
     }
 
-    const tags = Array.from(new Set([...(existing.tags || []), 'source:wlr', `wlr:project:${projectId}`, row.last_run_id ? `wlr:run:${row.last_run_id}` : ''].filter(Boolean)));
+    const tags = Array.from(
+      new Set([...(existing.tags || []), 'source:wlr', `wlr:project:${projectId}`, row.last_run_id ? `wlr:run:${row.last_run_id}` : ''].filter(Boolean))
+    );
     const existingCustom = (existing.custom_fields || {}) as Record<string, unknown>;
     const existingWlr = (existingCustom.wlr || {}) as Record<string, unknown>;
 
@@ -147,11 +220,19 @@ export async function syncWlrProject(projectId: string) {
 
   return {
     projectId,
-    runsSynced: (runsRes.runs || []).length,
-    leadsReceived: (leadsRes.leads || []).length,
+    incremental,
+    fullResync: !!opts.fullResync,
+    runWatermark: watermark?.toISOString?.() || null,
+    runsFetched: runs.length,
+    runsConsideredForLeadSync: runsToSync.length,
+    leadsReceived: leads.length,
     created,
     updated,
-    skippedNoEmail
+    skippedNoEmail,
+    skippedLowConfidence,
+    skippedLowQualityEmail,
+    minEmailConfidence,
+    latestSyncedRunId: latestSyncedRun?.run_id || null
   };
 }
 

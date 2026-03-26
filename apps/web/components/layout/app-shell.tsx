@@ -9,6 +9,7 @@ const nav = [
   { href: '/accounts', label: 'Accounts' },
   { href: '/campaigns', label: 'Campaigns' },
   { href: '/leads', label: 'Leads' },
+  { href: '/wlr', label: 'WLR Runs' },
   { href: '/analytics', label: 'Analytics' },
   { href: '/suppression', label: 'Suppression' }
 ];
@@ -18,6 +19,7 @@ const titleByPath = new Map<string, string>([
   ['/accounts', 'Accounts'],
   ['/campaigns', 'Campaigns'],
   ['/leads', 'Leads'],
+  ['/wlr', 'WLR Runs'],
   ['/analytics', 'Analytics'],
   ['/suppression', 'Suppression'],
   ['/', 'Overview']

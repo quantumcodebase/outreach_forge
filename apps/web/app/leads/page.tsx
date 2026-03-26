@@ -79,7 +79,7 @@ export default function LeadsPage() {
       body: JSON.stringify({ projectId: 'intakevault' })
     });
     const data = await res.json();
-    setWlrStatus(`Synced runs ${data.runsSynced}, leads created ${data.created}, updated ${data.updated}, skipped(no email) ${data.skippedNoEmail}`);
+    setWlrStatus(`Incremental sync • runs considered ${data.runsConsideredForLeadSync}, created ${data.created}, updated ${data.updated}, skipped(no email) ${data.skippedNoEmail}, skipped(conf) ${data.skippedLowConfidence}`);
     await load();
   }
 
@@ -136,6 +136,7 @@ export default function LeadsPage() {
         <div className="text-xs text-zinc-500">
           Recent WLR runs in Postgres visibility layer: {wlrRuns.length}
           {wlrRuns[0] ? ` • latest ${wlrRuns[0].run_id} (${wlrRuns[0].status || 'unknown'})` : ''}
+          {' • '}Open <a className="underline" href="/wlr">WLR Runs</a> for full run/sync controls.
         </div>
       </section>
 
