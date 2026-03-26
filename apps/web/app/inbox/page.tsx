@@ -145,21 +145,21 @@ export default function InboxPage() {
 
   return (
     <div className="grid min-h-[72vh] grid-cols-12 gap-4">
-      <section className="col-span-5 rounded-xl border border-white/10 bg-black/20">
+      <section className="panel col-span-5">
         <div className="space-y-3 border-b border-white/10 p-3">
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search threads" className="h-9 w-full rounded-md border border-white/15 bg-zinc-900 px-3 text-sm" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search threads" className="control w-full" />
           <div className="flex items-center gap-1">
             {(['All', 'Unread'] as const).map((v) => (
-              <button key={v} onClick={() => setView(v)} className={`rounded-full border px-2.5 py-1 text-xs ${view === v ? 'border-white/40 bg-white/10 text-white' : 'border-white/15 text-zinc-400 hover:text-zinc-200'}`}>
+              <button key={v} onClick={() => setView(v)} className={`chip ${view === v ? 'border-sky-300/40 bg-sky-500/15 text-sky-100' : ''}`}>
                 {v}
               </button>
             ))}
-            <button onClick={() => setShowLabelFilters((s) => !s)} className="rounded-full border border-white/15 px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-200">Labels</button>
+            <button onClick={() => setShowLabelFilters((s) => !s)} className="chip">Labels</button>
           </div>
           {showLabelFilters ? (
             <div className="flex flex-wrap gap-1">
               {labels.map((l) => (
-                <button key={l} onClick={() => setView(l)} className={`rounded-full border px-2.5 py-1 text-xs ${view === l ? 'border-white/40 bg-white/10 text-white' : 'border-white/15 text-zinc-400 hover:text-zinc-200'}`}>{l}</button>
+                <button key={l} onClick={() => setView(l)} className={`chip ${view === l ? 'border-sky-300/40 bg-sky-500/15 text-sky-100' : ''}`}>{l}</button>
               ))}
             </div>
           ) : null}
@@ -180,7 +180,7 @@ export default function InboxPage() {
               <button
                 key={t.threadId}
                 onClick={() => setSelectedThreadId(t.threadId)}
-                className={`mb-1.5 w-full rounded-lg border px-3 py-2.5 text-left transition ${selectedThreadId === t.threadId ? 'border-sky-300/30 bg-sky-500/10' : 'border-white/10 hover:border-white/20 hover:bg-white/[0.04]'}`}
+                className={`mb-1.5 w-full rounded-lg border px-3 py-2.5 text-left transition ${selectedThreadId === t.threadId ? 'border-sky-300/35 bg-sky-500/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]' : 'border-white/10 hover:border-white/20 hover:bg-white/[0.04]'}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <p className="truncate text-sm font-semibold">{t.subject}</p>
@@ -198,7 +198,7 @@ export default function InboxPage() {
         </div>
       </section>
 
-      <section className={`${showMeta ? 'col-span-5' : 'col-span-7'} space-y-4 rounded-xl border border-white/10 bg-black/20 p-4`}>
+      <section className={`${showMeta ? 'col-span-5' : 'col-span-7'} panel space-y-4 p-4`}>
         {!selectedThreadId ? (
           <EmptyState title="No thread selected" description="Select a thread from the left pane to view messages." />
         ) : loadingMessages ? (
@@ -209,14 +209,14 @@ export default function InboxPage() {
           <>
             <div className="flex flex-wrap gap-2">
               {labels.map((l) => (
-                <button key={l} onClick={() => addLabel(l)} className="rounded-md border border-white/20 px-2 py-1 text-xs hover:bg-white/10">{l}</button>
+                <button key={l} onClick={() => addLabel(l)} className="btn px-2 py-1 text-xs">{l}</button>
               ))}
-              <button onClick={() => runAssist('/api/v1/assist/thread-analysis')} className="rounded-md border border-sky-400/30 px-2 py-1 text-xs text-sky-200 hover:bg-sky-500/10">Analyze thread</button>
-              <button onClick={() => runAssist('/api/v1/assist/reply-draft')} className="rounded-md border border-sky-400/30 px-2 py-1 text-xs text-sky-200 hover:bg-sky-500/10">Generate reply draft</button>
+              <button onClick={() => runAssist('/api/v1/assist/thread-analysis')} className="btn border-sky-400/30 bg-sky-500/10 px-2 py-1 text-xs text-sky-200">Analyze thread</button>
+              <button onClick={() => runAssist('/api/v1/assist/reply-draft')} className="btn border-sky-400/30 bg-sky-500/10 px-2 py-1 text-xs text-sky-200">Generate reply draft</button>
             </div>
             <div className="max-h-[45vh] space-y-2 overflow-y-auto pr-1">
               {messages.map((m) => (
-                <article key={m.id} className="rounded-lg border border-white/10 p-3">
+                <article key={m.id} className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
                   <div className="mb-1 flex items-center justify-between text-xs text-zinc-400">
                     <StatusBadge status={m.direction === 'received' ? 'active' : 'paused'} />
                     <span>{m.received_at || m.sent_at ? new Date((m.received_at || m.sent_at) as string).toLocaleString() : '-'}</span>
@@ -226,28 +226,28 @@ export default function InboxPage() {
                 </article>
               ))}
             </div>
-            <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+            <div className="panel-subtle space-y-2 p-3">
               <p className="text-sm font-semibold">Reply</p>
-              <textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="h-32 w-full rounded-md border border-white/15 bg-zinc-900 p-2 text-sm" />
-              <button onClick={sendReply} disabled={sending} className="rounded-md bg-white px-3 py-2 text-sm font-medium text-black disabled:opacity-60">{sending ? 'Sending…' : 'Send'}</button>
+              <textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="w-full rounded-md border p-2 text-sm h-32" />
+              <button onClick={sendReply} disabled={sending} className="btn btn-primary disabled:opacity-60">{sending ? 'Sending…' : 'Send'}</button>
             </div>
             {assistOutput ? (
-              <div className="rounded-lg border border-white/10 bg-zinc-900/40 p-3 text-sm">
+              <div className="panel-subtle rounded-lg p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <p className="font-medium text-zinc-100">Assist output ({assistOutput.mode || 'mock'})</p>
-                  <button className="rounded border border-white/20 px-2 py-1 text-xs" onClick={() => navigator.clipboard.writeText(JSON.stringify(assistOutput, null, 2))}>Copy output</button>
+                  <button className="btn px-2 py-1 text-xs" onClick={() => navigator.clipboard.writeText(JSON.stringify(assistOutput, null, 2))}>Copy output</button>
                 </div>
                 <pre className="mt-2 whitespace-pre-wrap text-xs text-zinc-300">{JSON.stringify(assistOutput, null, 2)}</pre>
               </div>
             ) : (
-              <div className="rounded-lg border border-white/10 bg-zinc-900/30 p-3 text-xs text-zinc-500">No analysis yet. Generate a thread analysis or reply draft.</div>
+              <div className="panel-subtle rounded-lg p-3 text-xs text-zinc-500">No analysis yet. Generate a thread analysis or reply draft.</div>
             )}
           </>
         )}
       </section>
 
       {showMeta ? (
-        <aside className="col-span-2 rounded-xl border border-white/10 bg-white/[0.02] p-3 text-xs text-zinc-300">
+        <aside className="panel-subtle col-span-2 p-3 text-xs text-zinc-300">
           <p className="text-sm font-semibold text-zinc-100">Thread metadata</p>
           {selectedThreadId ? (
             <div className="mt-2 space-y-2">
@@ -261,7 +261,7 @@ export default function InboxPage() {
         </aside>
       ) : null}
 
-      <button onClick={() => setShowMeta((s) => !s)} className="fixed bottom-4 left-[19rem] rounded-md border border-white/15 bg-zinc-950/95 px-2.5 py-1 text-xs text-zinc-300 hover:bg-zinc-900">
+      <button onClick={() => setShowMeta((s) => !s)} className="btn fixed bottom-4 left-[19rem] bg-[#090d14]/95 px-2.5 py-1 text-xs text-zinc-300">
         {showMeta ? 'Hide metadata' : 'Show metadata'}
       </button>
     </div>

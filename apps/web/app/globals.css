@@ -4,16 +4,138 @@
 
 :root {
   color-scheme: dark;
+  --bg: #07090e;
+  --surface-0: #0c1017;
+  --surface-1: #111723;
+  --surface-2: #161e2a;
+  --border: rgba(161, 175, 198, 0.18);
+  --border-strong: rgba(176, 194, 221, 0.3);
+  --text-1: #e6e9f2;
+  --text-2: #aab4c8;
+  --text-3: #7f8a9f;
+  --accent: #5b8cff;
+  --accent-soft: rgba(91, 140, 255, 0.14);
+  --ok: #2fb07d;
+  --warn: #ca9a3b;
+  --danger: #d25b72;
 }
 
-body {
-  @apply bg-zinc-950 text-zinc-100 antialiased;
+@layer base {
+  * {
+    @apply border-transparent;
+  }
+
+  body {
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(circle at 0% 0%, rgba(92, 126, 199, 0.1), transparent 34%),
+      radial-gradient(circle at 100% 100%, rgba(63, 86, 130, 0.08), transparent 28%);
+    color: var(--text-1);
+    @apply antialiased text-[14px] leading-[1.45];
+    font-feature-settings: 'cv03', 'cv04', 'ss01';
+  }
+
+  h1 {
+    @apply text-2xl font-semibold tracking-tight;
+  }
+
+  h2 {
+    @apply text-xl font-semibold tracking-tight;
+  }
+
+  h3 {
+    @apply text-base font-semibold tracking-tight;
+  }
+
+  ::selection {
+    background-color: rgba(102, 144, 255, 0.28);
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-offset-1 ring-offset-[#0a0e14];
+    ring-color: rgba(108, 148, 255, 0.6);
+  }
+
+  input,
+  select,
+  textarea {
+    background-color: color-mix(in oklab, var(--surface-1) 92%, black);
+    border-color: var(--border);
+    color: var(--text-1);
+    @apply transition-colors duration-150;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-3);
+  }
+
+  input:hover,
+  select:hover,
+  textarea:hover {
+    border-color: var(--border-strong);
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: rgba(95, 147, 255, 0.55);
+    box-shadow:
+      0 0 0 1px rgba(95, 147, 255, 0.24),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  button {
+    @apply transition-colors duration-150;
+  }
 }
 
-h1 {
-  @apply text-2xl font-semibold tracking-tight;
-}
+@layer components {
+  .panel {
+    background-color: rgba(14, 19, 29, 0.86);
+    border-color: var(--border);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.035),
+      0 12px 28px rgba(0, 0, 0, 0.28);
+    @apply rounded-xl border;
+  }
 
-h2 {
-  @apply text-xl font-semibold tracking-tight;
+  .panel-subtle {
+    background-color: rgba(15, 21, 32, 0.62);
+    border-color: rgba(150, 165, 190, 0.15);
+    @apply rounded-xl border;
+  }
+
+  .control {
+    @apply h-9 rounded-md border px-3 text-sm;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium;
+    border-color: var(--border);
+    color: var(--text-1);
+    background-color: rgba(20, 27, 40, 0.75);
+  }
+
+  .btn:hover {
+    background-color: rgba(30, 39, 55, 0.86);
+    border-color: var(--border-strong);
+  }
+
+  .btn-primary {
+    background-color: rgba(86, 128, 235, 0.95);
+    border-color: rgba(149, 180, 255, 0.45);
+    color: #f5f8ff;
+  }
+
+  .btn-primary:hover {
+    background-color: rgba(98, 142, 255, 1);
+  }
+
+  .chip {
+    @apply inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium;
+    border-color: var(--border);
+    color: var(--text-2);
+    background-color: rgba(17, 24, 36, 0.7);
+  }
 }

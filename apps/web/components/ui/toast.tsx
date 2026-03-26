@@ -33,12 +33,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`pointer-events-auto rounded-lg border px-4 py-3 shadow-lg ${
-              toast.kind === 'success' ? 'border-emerald-600/30 bg-emerald-950 text-emerald-100' : 'border-rose-600/30 bg-rose-950 text-rose-100'
+            className={`pointer-events-auto rounded-lg border px-4 py-3 shadow-xl backdrop-blur-sm ${
+              toast.kind === 'success'
+                ? 'border-emerald-500/30 bg-emerald-900/60 text-emerald-100 shadow-emerald-950/60'
+                : 'border-rose-500/30 bg-rose-900/60 text-rose-100 shadow-rose-950/60'
             }`}
           >
             <p className="text-sm font-semibold">{toast.title}</p>
-            {toast.description ? <p className="mt-1 text-xs opacity-90">{toast.description}</p> : null}
+            {toast.description ? <p className="mt-1 text-xs opacity-90 leading-relaxed">{toast.description}</p> : null}
           </div>
         ))}
       </div>

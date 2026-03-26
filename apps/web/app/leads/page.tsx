@@ -69,13 +69,13 @@ export default function LeadsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-white/10 p-4 space-y-3">
+      <section className="panel space-y-3 p-4">
         <p className="text-sm font-medium">Create lead</p>
         <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
-          <input className="rounded border border-white/15 bg-zinc-900 px-3 py-2" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <input className="rounded border border-white/15 bg-zinc-900 px-3 py-2" placeholder="First name (optional)" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+          <input className="rounded border px-3 py-2" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input className="rounded border px-3 py-2" placeholder="First name (optional)" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
           <button
-            className="rounded bg-white px-3 py-2 text-black"
+            className="btn btn-primary"
             onClick={async () => {
               await fetch('/api/leads', {
                 method: 'POST',
@@ -100,18 +100,18 @@ export default function LeadsPage() {
         tableMinWidthClass="min-w-[1150px]"
         rightSlot={
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <select value={source} onChange={(e) => setSource(e.target.value as 'all' | 'wlr')} className="h-9 rounded border border-white/15 bg-zinc-900 px-2">
+            <select value={source} onChange={(e) => setSource(e.target.value as 'all' | 'wlr')} className="control px-2">
               <option value="all">All sources</option>
               <option value="wlr">WLR only</option>
             </select>
-            <span className="rounded border border-white/15 px-2 py-1 text-zinc-300">WLR in view: {wlrCount}</span>
-            <select value={selectedCampaign} onChange={(e) => setSelectedCampaign(e.target.value)} className="h-9 rounded border border-white/15 bg-zinc-900 px-2">
+            <span className="chip rounded-md">WLR in view: {wlrCount}</span>
+            <select value={selectedCampaign} onChange={(e) => setSelectedCampaign(e.target.value)} className="control px-2">
               {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            <button disabled={!selectedCampaign || selectedIds.length === 0} onClick={enrollSelected} className="rounded border border-white/20 px-2 py-1 disabled:opacity-50">
+            <button disabled={!selectedCampaign || selectedIds.length === 0} onClick={enrollSelected} className="btn px-2 py-1 disabled:opacity-50">
               Enroll selected
             </button>
-            <span className="rounded border border-amber-400/25 px-2 py-1 text-amber-200">Dry run aware</span>
+            <span className="chip border-amber-400/25 text-amber-200">Dry run aware</span>
           </div>
         }
         headers={[
@@ -139,7 +139,7 @@ export default function LeadsPage() {
                 {isWlr ? <div className="mt-1 text-zinc-500">score {String(wlrMeta.score ?? 'n/a')} • snippets {Array.isArray(wlrMeta.snippets) ? wlrMeta.snippets.length : 0}</div> : null}
               </td>
               <td className="px-4 py-3 text-zinc-400">{lead.status}</td>
-              <td className="px-4 py-3"><button className="rounded border border-white/20 px-2 py-1 text-xs" onClick={() => runLeadBrief(lead.id)}>Lead brief</button></td>
+              <td className="px-4 py-3"><button className="btn px-2 py-1 text-xs" onClick={() => runLeadBrief(lead.id)}>Lead brief</button></td>
             </tr>
           );
         })}
@@ -147,15 +147,15 @@ export default function LeadsPage() {
 
       {bulkResult ? <p className="text-sm text-zinc-300">{bulkResult}</p> : null}
       {leadBrief ? (
-        <section className="rounded-xl border border-white/10 p-4 text-sm">
+        <section className="panel p-4 text-sm">
           <div className="flex items-center justify-between">
             <p className="font-medium">Lead brief ({leadBrief.mode})</p>
-            <button className="rounded border border-white/20 px-2 py-1 text-xs" onClick={() => navigator.clipboard.writeText(JSON.stringify(leadBrief, null, 2))}>Copy output</button>
+            <button className="btn px-2 py-1 text-xs" onClick={() => navigator.clipboard.writeText(JSON.stringify(leadBrief, null, 2))}>Copy output</button>
           </div>
           <p className="mt-2 text-zinc-300">{leadBrief.summary}</p>
         </section>
       ) : (
-        <section className="rounded-xl border border-white/10 p-4 text-sm text-zinc-500">No analysis yet. Generate a thread analysis or reply draft.</section>
+        <section className="panel-subtle p-4 text-sm text-zinc-500">No analysis yet. Generate a thread analysis or reply draft.</section>
       )}
     </div>
   );

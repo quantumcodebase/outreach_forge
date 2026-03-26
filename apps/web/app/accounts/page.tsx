@@ -402,21 +402,21 @@ export default function AccountsPage() {
         rightSlot={
           <div className="flex flex-wrap items-center gap-2">
             {statusFilter === 'default' ? <span className="text-xs text-zinc-400">Default: Active + Paused</span> : null}
-            <div className="inline-flex rounded-md border border-white/15 bg-zinc-900/70 p-0.5 text-xs">
-              <button onClick={() => setStatusFilter('all')} className={`rounded px-2 py-1 ${statusFilter === 'all' ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>All</button>
-              <button onClick={() => setStatusFilter('active')} className={`rounded px-2 py-1 ${statusFilter === 'active' ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>Active</button>
-              <button onClick={() => setStatusFilter('paused')} className={`rounded px-2 py-1 ${statusFilter === 'paused' ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>Paused</button>
-              <button onClick={() => setStatusFilter('error')} className={`rounded px-2 py-1 ${statusFilter === 'error' ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>Error</button>
+            <div className="inline-flex rounded-md border border-white/15 bg-[#101722]/80 p-0.5 text-xs">
+              <button onClick={() => setStatusFilter('all')} className={`rounded px-2 py-1 ${statusFilter === 'all' ? 'bg-sky-500/20 text-sky-100' : 'text-zinc-300 hover:bg-white/10'}`}>All</button>
+              <button onClick={() => setStatusFilter('active')} className={`rounded px-2 py-1 ${statusFilter === 'active' ? 'bg-sky-500/20 text-sky-100' : 'text-zinc-300 hover:bg-white/10'}`}>Active</button>
+              <button onClick={() => setStatusFilter('paused')} className={`rounded px-2 py-1 ${statusFilter === 'paused' ? 'bg-sky-500/20 text-sky-100' : 'text-zinc-300 hover:bg-white/10'}`}>Paused</button>
+              <button onClick={() => setStatusFilter('error')} className={`rounded px-2 py-1 ${statusFilter === 'error' ? 'bg-sky-500/20 text-sky-100' : 'text-zinc-300 hover:bg-white/10'}`}>Error</button>
             </div>
             {hiddenErrorCount > 0 ? (
               <button onClick={() => setStatusFilter('error')} className="text-xs text-amber-300 underline underline-offset-2 hover:text-amber-200">
                   {hiddenErrorCount} error accounts hidden · View
               </button>
             ) : null}
-            <button onClick={() => syncNow()} disabled={syncing} className="rounded-md border border-white/20 px-3 py-2 text-sm text-zinc-200 hover:bg-white/10 disabled:opacity-60">
+            <button onClick={() => syncNow()} disabled={syncing} className="btn disabled:opacity-60">
               {syncing ? 'Syncing…' : 'Sync now'}
             </button>
-            <button onClick={() => setDrawerOpen(true)} className="rounded-md bg-white px-3 py-2 text-sm font-medium text-black hover:bg-zinc-200">
+            <button onClick={() => setDrawerOpen(true)} className="btn btn-primary">
               Add account
             </button>
           </div>
@@ -439,7 +439,7 @@ export default function AccountsPage() {
         ) : filtered.length === 0 ? (
           <tr>
             <td colSpan={7} className="p-4">
-              <EmptyState title="No accounts connected" description="Add an account to start syncing inbox threads." action={<button onClick={() => setDrawerOpen(true)} className="rounded-md border border-white/20 px-3 py-2 text-sm hover:bg-white/10">Add account</button>} />
+              <EmptyState title="No accounts connected" description="Add an account to start syncing inbox threads." action={<button onClick={() => setDrawerOpen(true)} className="btn">Add account</button>} />
             </td>
           </tr>
         ) : (
@@ -452,10 +452,10 @@ export default function AccountsPage() {
               <td className="px-4 py-3 whitespace-nowrap text-zinc-300">{a.timezone}</td>
               <td className="px-4 py-3 whitespace-nowrap text-zinc-400">{a.last_synced_at ? new Date(a.last_synced_at).toLocaleString() : 'Never'}</td>
               <td className="px-4 py-3 whitespace-nowrap space-x-2">
-                <button onClick={() => openEdit(a)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Test + activate</button>
-                <button onClick={() => openEdit(a)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Edit</button>
-                <button onClick={() => syncNow(a.id)} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">Sync now</button>
-                {a.status === 'error' ? <button onClick={() => openFix(a)} className="rounded border border-amber-400/50 px-2 py-1 text-xs text-amber-200 hover:bg-amber-400/10">Fix</button> : null}
+                <button onClick={() => openEdit(a)} className="btn px-2 py-1 text-xs">Test + activate</button>
+                <button onClick={() => openEdit(a)} className="btn px-2 py-1 text-xs">Edit</button>
+                <button onClick={() => syncNow(a.id)} className="btn px-2 py-1 text-xs">Sync now</button>
+                {a.status === 'error' ? <button onClick={() => openFix(a)} className="btn border-amber-400/50 bg-amber-400/10 px-2 py-1 text-xs text-amber-200">Fix</button> : null}
               </td>
             </tr>
           ))
@@ -465,7 +465,7 @@ export default function AccountsPage() {
       {drawerOpen ? (
         <div className="fixed inset-0 z-40 flex bg-black/60" role="dialog" aria-modal="true">
           <button className="flex-1" onClick={() => setDrawerOpen(false)} aria-label="Close" />
-          <div className="w-full max-w-xl space-y-4 border-l border-white/10 bg-zinc-950 p-6">
+          <div className="w-full max-w-xl space-y-4 border-l border-white/10 bg-[#0a0f18] p-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl">Add account</h2>
               <button onClick={() => setDrawerOpen(false)} className="text-sm text-zinc-400 hover:text-zinc-100">Close</button>
@@ -477,7 +477,7 @@ export default function AccountsPage() {
                   <span className="text-xs text-zinc-400">{k}</span>
                   <input
                     type={k.includes('password') ? 'password' : 'text'}
-                    className="h-10 w-full rounded-md border border-white/15 bg-zinc-900 px-3"
+                    className="h-10 w-full rounded-md border px-3"
                     value={String(v)}
                     onChange={(e) => setForm((prev) => ({ ...prev, [k]: k.includes('port') || k === 'daily_cap' ? Number(e.target.value) : e.target.value }))}
                   />
@@ -485,10 +485,10 @@ export default function AccountsPage() {
               ))}
             </div>
             <div className="flex gap-2">
-              <button onClick={saveAccount} disabled={saving} className="rounded-md bg-white px-3 py-2 text-sm font-medium text-black disabled:opacity-60">{saving ? 'Saving...' : 'Save account'}</button>
-              <button onClick={testConnection} disabled={testing} className="rounded-md border border-white/20 px-3 py-2 text-sm hover:bg-white/10 disabled:opacity-60">{testing ? 'Testing...' : 'Test connection'}</button>
+              <button onClick={saveAccount} disabled={saving} className="btn btn-primary disabled:opacity-60">{saving ? 'Saving...' : 'Save account'}</button>
+              <button onClick={testConnection} disabled={testing} className="btn disabled:opacity-60">{testing ? 'Testing...' : 'Test connection'}</button>
             </div>
-            {testResult ? <p className="rounded-md border border-white/10 bg-white/[0.02] p-3 text-sm">{testResult}</p> : null}
+            {testResult ? <p className="panel-subtle rounded-md p-3 text-sm">{testResult}</p> : null}
           </div>
         </div>
       ) : null}
@@ -496,7 +496,7 @@ export default function AccountsPage() {
       {fixing ? (
         <div className="fixed inset-0 z-40 flex bg-black/60" role="dialog" aria-modal="true">
           <button className="flex-1" onClick={() => setFixing(null)} aria-label="Close" />
-          <div className="w-full max-w-lg space-y-4 border-l border-white/10 bg-zinc-950 p-6">
+          <div className="w-full max-w-lg space-y-4 border-l border-white/10 bg-[#0a0f18] p-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl">Fix credentials</h2>
               <button onClick={() => setFixing(null)} className="text-sm text-zinc-400 hover:text-zinc-100">Close</button>
@@ -504,14 +504,14 @@ export default function AccountsPage() {
             <p className="text-sm text-zinc-400">{fixing.label} • {maskUser(fixing.smtp_user)}</p>
             <label className="space-y-1 text-sm">
               <span className="text-xs text-zinc-400">Mailbox password</span>
-              <input type="password" className="h-10 w-full rounded-md border border-white/15 bg-zinc-900 px-3" value={fixPassword} onChange={(e) => setFixPassword(e.target.value)} />
+              <input type="password" className="h-10 w-full rounded-md border px-3" value={fixPassword} onChange={(e) => setFixPassword(e.target.value)} />
             </label>
             <div className="flex flex-wrap gap-2">
-              <button onClick={saveFixedCredentials} disabled={fixSaving || !fixPassword.trim()} className="rounded-md bg-white px-3 py-2 text-sm font-medium text-black disabled:opacity-60">{fixSaving ? 'Saving…' : 'Save credentials'}</button>
-              <button onClick={testFixedConnection} disabled={fixTesting || !fixPassword.trim()} className="rounded-md border border-white/20 px-3 py-2 text-sm hover:bg-white/10 disabled:opacity-60">{fixTesting ? 'Testing…' : 'Test connection'}</button>
-              <button onClick={activateFixedAccount} disabled={fixActivating || !fixTestOk} className="rounded-md border border-emerald-400/50 px-3 py-2 text-sm text-emerald-200 hover:bg-emerald-400/10 disabled:opacity-50">{fixActivating ? 'Activating…' : 'Activate'}</button>
+              <button onClick={saveFixedCredentials} disabled={fixSaving || !fixPassword.trim()} className="btn btn-primary disabled:opacity-60">{fixSaving ? 'Saving…' : 'Save credentials'}</button>
+              <button onClick={testFixedConnection} disabled={fixTesting || !fixPassword.trim()} className="btn disabled:opacity-60">{fixTesting ? 'Testing…' : 'Test connection'}</button>
+              <button onClick={activateFixedAccount} disabled={fixActivating || !fixTestOk} className="btn border-emerald-400/50 bg-emerald-500/10 text-emerald-200 disabled:opacity-50">{fixActivating ? 'Activating…' : 'Activate'}</button>
             </div>
-            {fixTestResult ? <p className="rounded-md border border-white/10 bg-white/[0.02] p-3 text-sm">{fixTestResult}</p> : null}
+            {fixTestResult ? <p className="panel-subtle rounded-md p-3 text-sm">{fixTestResult}</p> : null}
             {!fixTestOk ? <p className="text-xs text-zinc-500">Activate unlocks after IMAP + SMTP test pass.</p> : null}
           </div>
         </div>
@@ -520,20 +520,20 @@ export default function AccountsPage() {
       {editing && editForm ? (
         <div className="fixed inset-0 z-40 flex bg-black/60" role="dialog" aria-modal="true">
           <button className="flex-1" onClick={() => setEditing(null)} aria-label="Close" />
-          <div className="w-full max-w-2xl space-y-4 border-l border-white/10 bg-zinc-950 p-6">
+          <div className="w-full max-w-2xl space-y-4 border-l border-white/10 bg-[#0a0f18] p-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl">Edit account settings</h2>
               <button onClick={() => setEditing(null)} className="text-sm text-zinc-400 hover:text-zinc-100">Close</button>
             </div>
             <p className="text-sm text-zinc-400">Username must be full email address; password is mailbox password.</p>
-            <button onClick={applyIonosDefaults} className="rounded border border-white/20 px-3 py-1 text-xs hover:bg-white/10">Use IONOS defaults</button>
+            <button onClick={applyIonosDefaults} className="btn px-3 py-1 text-xs">Use IONOS defaults</button>
             <div className="grid grid-cols-2 gap-3 text-sm">
               {Object.entries(editForm).map(([k, v]) => (
                 <label key={k} className="space-y-1">
                   <span className="text-xs text-zinc-400">{k}</span>
                   <input
                     type="text"
-                    className="h-10 w-full rounded-md border border-white/15 bg-zinc-900 px-3"
+                    className="h-10 w-full rounded-md border px-3"
                     value={String(v)}
                     onChange={(e) => setEditForm((prev: any) => ({ ...prev, [k]: ['imap_port', 'smtp_port', 'daily_cap'].includes(k) ? Number(e.target.value) : e.target.value }))}
                   />
@@ -543,20 +543,20 @@ export default function AccountsPage() {
 
             <label className="space-y-1 text-sm">
               <span className="text-xs text-zinc-400">Mailbox password (for test only)</span>
-              <input type="password" className="h-10 w-full rounded-md border border-white/15 bg-zinc-900 px-3" value={editTestPassword} onChange={(e) => setEditTestPassword(e.target.value)} />
+              <input type="password" className="h-10 w-full rounded-md border px-3" value={editTestPassword} onChange={(e) => setEditTestPassword(e.target.value)} />
             </label>
 
             <div className="flex flex-wrap gap-2">
-              <button onClick={saveSettings} disabled={editSaving} className="rounded-md bg-white px-3 py-2 text-sm font-medium text-black disabled:opacity-60">{editSaving ? 'Saving…' : 'Save settings'}</button>
-              <button onClick={testEditedConnection} disabled={editTesting || !editTestPassword.trim()} className="rounded-md border border-white/20 px-3 py-2 text-sm hover:bg-white/10 disabled:opacity-60">{editTesting ? 'Testing…' : 'Test connection'}</button>
-              <button onClick={activateEditedAccount} disabled={editActivating || !editTestOk} className="rounded-md border border-emerald-400/50 px-3 py-2 text-sm text-emerald-200 hover:bg-emerald-400/10 disabled:opacity-50">{editActivating ? 'Activating…' : 'Activate'}</button>
+              <button onClick={saveSettings} disabled={editSaving} className="btn btn-primary disabled:opacity-60">{editSaving ? 'Saving…' : 'Save settings'}</button>
+              <button onClick={testEditedConnection} disabled={editTesting || !editTestPassword.trim()} className="btn disabled:opacity-60">{editTesting ? 'Testing…' : 'Test connection'}</button>
+              <button onClick={activateEditedAccount} disabled={editActivating || !editTestOk} className="btn border-emerald-400/50 bg-emerald-500/10 text-emerald-200 disabled:opacity-50">{editActivating ? 'Activating…' : 'Activate'}</button>
             </div>
-            {editTestResult ? <p className="rounded-md border border-white/10 bg-white/[0.02] p-3 text-sm">{editTestResult}</p> : null}
+            {editTestResult ? <p className="panel-subtle rounded-md p-3 text-sm">{editTestResult}</p> : null}
           </div>
         </div>
       ) : null}
 
-      <div className="rounded-lg border border-white/10 bg-zinc-900/40 p-4 text-sm text-zinc-300">
+      <div className="panel rounded-lg p-4 text-sm text-zinc-300">
         <p className="mb-2 font-medium text-zinc-100">Proof checklist (Phase 1 real mailbox)</p>
         <ol className="list-decimal space-y-1 pl-5">
           <li>Use IONOS defaults.</li>
@@ -566,12 +566,12 @@ export default function AccountsPage() {
           <li>Verify <code>/inbox</code> has threads and send one reply.</li>
         </ol>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-md border border-white/10 bg-black/20 p-3">
+        <div className="panel-subtle mt-4 flex flex-wrap items-center gap-2 rounded-md p-3">
           <span className="text-xs uppercase tracking-wide text-zinc-400">Safe debug</span>
           <select
             value={selectedProofAccount?.id ?? ''}
             onChange={(e) => setProofAccountId(e.target.value)}
-            className="h-9 min-w-[220px] rounded-md border border-white/15 bg-zinc-900 px-3 text-sm"
+            className="h-9 min-w-[220px] rounded-md border px-3 text-sm"
           >
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>{a.label} ({a.status})</option>
@@ -580,14 +580,14 @@ export default function AccountsPage() {
           <button
             onClick={copySafeDebug}
             disabled={!selectedProofAccount}
-            className="rounded-md border border-white/20 px-3 py-2 text-xs hover:bg-white/10 disabled:opacity-50"
+            className="btn px-3 py-2 text-xs disabled:opacity-50"
           >
             Copy safe debug
           </button>
           <button
             onClick={copyProofChecklistTemplate}
             disabled={!selectedProofAccount}
-            className="rounded-md border border-white/20 px-3 py-2 text-xs hover:bg-white/10 disabled:opacity-50"
+            className="btn px-3 py-2 text-xs disabled:opacity-50"
           >
             Copy proof checklist template
           </button>
