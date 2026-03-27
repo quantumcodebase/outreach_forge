@@ -205,19 +205,22 @@ async function syncCompletedRun(recipe: any, runId: string) {
     }
   });
 
+  const syncedAt = new Date();
+  const wasScheduled = recipe.last_run_origin === 'scheduled';
+  const shouldScheduleNext = recipe.enabled && recipe.cadence_type !== 'manual' && recipe.cadence_type !== 'paused';
+
   await prisma.wlr_search_recipes.update({
     where: { id: recipe.id },
     data: {
-      lifecycle_status: 'synced_scheduled',
+      lifecycle_status: wasScheduled ? 'synced_scheduled' : 'synced_manual',
       last_synced_source_run_id: runId,
       pending_run_id: null,
       pending_run_started_at: null,
-      last_run_at: new Date(),
-      last_sync_at: new Date(),
-      last_success_at: new Date(),
+      last_sync_at: syncedAt,
+      last_success_at: syncedAt,
       last_failure_at: null,
       last_failure_message: null,
-      next_run_at: nextWindow(new Date(), recipe.cadence_type === 'weekdays')
+      next_run_at: shouldScheduleNext ? nextWindow(syncedAt, recipe.cadence_type === 'weekdays') : null
     }
   });
 }
@@ -278,7 +281,15 @@ async function processPending(recipe: any) {
 
 export async function runWlrSchedulerTick() {
   const now = new Date();
-  const recipes = await prisma.wlr_search_recipes.findMany({ where: { enabled: true }, orderBy: [{ next_run_at: 'asc' }, { updated_at: 'asc' }] });
+  const recipes = await prisma.wlr_search_recipes.findMany({
+    where: {
+      OR: [
+        { enabled: true },
+        { pending_run_id: { not: null } }
+      ]
+    },
+    orderBy: [{ next_run_at: 'asc' }, { updated_at: 'asc' }]
+  });
 
   let failures = 0;
   const launchedProjects = new Set<string>();
