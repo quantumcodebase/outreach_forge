@@ -2,8 +2,14 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@cockpit/db';
 import { triggerWlrRun } from '@/lib/server/wlr-bridge';
 
-export async function POST(_req: Request, { params }: { params: Promise<{ recipeId: string }> }) {
-  const { recipeId } = await params;
+export async function POST(_req: Request, { params }: { params: Promise<{ recipeId?: string }> }) {
+  const routeParams = await params;
+  const recipeId = routeParams?.recipeId?.trim();
+
+  if (!recipeId) {
+    return NextResponse.json({ error: 'missing_recipe_id' }, { status: 400 });
+  }
+
   const recipe = await prisma.wlr_search_recipes.findUnique({ where: { id: recipeId } });
   if (!recipe) return NextResponse.json({ error: 'recipe_not_found' }, { status: 404 });
 
@@ -20,17 +26,30 @@ export async function POST(_req: Request, { params }: { params: Promise<{ recipe
 
   const run = await triggerWlrRun(payload);
   if (run?.ok) {
-    await prisma.wlr_search_recipes.update({
-      where: { id: recipe.id },
-      data: {
-        last_run_at: new Date(),
-        last_run_origin: 'manual',
-        last_success_at: new Date(),
-        last_failure_at: null,
-        last_failure_message: null,
+    try {
+      await prisma.wlr_search_recipes.update({
+        where: { id: recipeId },
+        data: {
+          last_run_at: new Date(),
+          last_run_origin: 'manual',
+          lifecycle_status: 'running_manual',
+          pending_run_id: String(run?.run_id || ''),
+          pending_run_started_at: new Date(),
+          last_success_at: new Date(),
+          last_failure_at: null,
+          last_failure_message: null,
+        }
+      });
+    } catch (error: any) {
+      if (error?.code === 'P2025') {
+        return NextResponse.json({ error: 'recipe_not_found' }, { status: 404 });
       }
-    });
+      if (error?.name === 'PrismaClientValidationError') {
+        return NextResponse.json({ error: 'invalid_recipe_id' }, { status: 400 });
+      }
+      throw error;
+    }
   }
 
-  return NextResponse.json({ ok: true, run, recipeId: recipe.id });
+  return NextResponse.json({ ok: true, run, recipeId });
 }

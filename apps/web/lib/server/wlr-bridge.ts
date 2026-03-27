@@ -1,4 +1,5 @@
 import { prisma } from '@cockpit/db';
+import { upsertLeadQualification } from './wlr-qualification';
 
 type WlrLeadRow = {
   lead_id?: string;
@@ -30,6 +31,9 @@ type WlrRunRow = {
 type SyncOptions = {
   fullResync?: boolean;
   minEmailConfidence?: number;
+  recipeId?: string;
+  offerType?: string;
+  onlyRunId?: string;
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
@@ -78,17 +82,24 @@ export async function syncWlrProject(projectId: string, opts: SyncOptions = {}) 
 
   const watermark = latestSyncedRun?.started_at ?? null;
   const incremental = !opts.fullResync;
-  const runsToSync = incremental
-    ? runs.filter((run) => {
-        if (!watermark) return true;
-        if (!run.started_at) return true;
-        return new Date(run.started_at) > watermark;
-      })
-    : runs;
+  const runsToSync = opts.onlyRunId
+    ? runs.filter((r) => r.run_id === opts.onlyRunId)
+    : incremental
+      ? runs.filter((run) => {
+          if (!watermark) return true;
+          if (!run.started_at) return true;
+          return new Date(run.started_at) > watermark;
+        })
+      : runs;
 
   let leads: WlrLeadRow[] = [];
 
-  if (opts.fullResync || !watermark) {
+  if (opts.onlyRunId) {
+    const leadsRes = await fetchJson<{ leads: WlrLeadRow[] }>(
+      `${wlrWebUrl}/api/leads?project=${encodeURIComponent(projectId)}&mode=all&run=${encodeURIComponent(opts.onlyRunId)}&limit=5000`
+    );
+    leads = leadsRes.leads || [];
+  } else if (opts.fullResync || !watermark) {
     const leadsRes = await fetchJson<{ leads: WlrLeadRow[] }>(
       `${wlrWebUrl}/api/leads?project=${encodeURIComponent(projectId)}&mode=all&all_history=1&limit=5000`
     );
@@ -168,6 +179,7 @@ export async function syncWlrProject(projectId: string, opts: SyncOptions = {}) 
     const existing = await prisma.leads.findUnique({ where: { email } });
     const wlrMeta = {
       project_id: projectId,
+      recipe_id: opts.recipeId || null,
       lead_id: row.lead_id || null,
       run_id: row.last_run_id || null,
       score: row.lead_score ?? null,
@@ -178,7 +190,7 @@ export async function syncWlrProject(projectId: string, opts: SyncOptions = {}) 
     };
 
     if (!existing) {
-      await prisma.leads.create({
+      const createdLead = await prisma.leads.create({
         data: {
           email,
           first_name: row.name || null,
@@ -188,6 +200,13 @@ export async function syncWlrProject(projectId: string, opts: SyncOptions = {}) 
           custom_fields: { wlr: wlrMeta } as any,
           status: 'active'
         }
+      });
+      await upsertLeadQualification({
+        leadId: createdLead.id,
+        projectId,
+        recipeId: opts.recipeId || null,
+        why: row.why_this_lead || null,
+        offerType: opts.offerType || null,
       });
       created += 1;
       continue;
@@ -214,6 +233,13 @@ export async function syncWlrProject(projectId: string, opts: SyncOptions = {}) 
           }
         } as any
       }
+    });
+    await upsertLeadQualification({
+      leadId: existing.id,
+      projectId,
+      recipeId: opts.recipeId || null,
+      why: row.why_this_lead || null,
+      offerType: opts.offerType || null,
     });
     updated += 1;
   }
