@@ -35,7 +35,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ recipe
           lifecycle_status: 'running_manual',
           pending_run_id: String(run?.run_id || ''),
           pending_run_started_at: new Date(),
-          last_success_at: new Date(),
           last_failure_at: null,
           last_failure_message: null,
         }

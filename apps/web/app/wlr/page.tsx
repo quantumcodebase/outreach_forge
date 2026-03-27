@@ -31,6 +31,8 @@ type RecipeRow = {
   last_sync_at: string | null;
   settings_json: Record<string, unknown>;
   next_run_at: string | null;
+  lifecycle_status: string | null;
+  pending_run_id: string | null;
   last_run_origin: string | null;
   last_success_at: string | null;
   last_failure_at: string | null;
@@ -50,18 +52,21 @@ export default function WlrRunsPage() {
   const [summary, setSummary] = useState<any>(null);
   const [schedulerState, setSchedulerState] = useState<any>(null);
   const [status, setStatus] = useState<string>('');
+  const [qualifications, setQualifications] = useState<any[]>([]);
   const [projectId, setProjectId] = useState('intakevault');
 
   async function load() {
-    const [runsRes, recipesRes, summaryRes] = await Promise.all([
+    const [runsRes, recipesRes, summaryRes, qualRes] = await Promise.all([
       fetch(`/api/wlr/runs?projectId=${encodeURIComponent(projectId)}&limit=20`).then((r) => r.json()),
       fetch(`/api/wlr/recipes?projectId=${encodeURIComponent(projectId)}`).then((r) => r.json()),
-      fetch(`/api/wlr/summary?projectId=${encodeURIComponent(projectId)}`).then((r) => r.json())
+      fetch(`/api/wlr/summary?projectId=${encodeURIComponent(projectId)}`).then((r) => r.json()),
+      fetch(`/api/wlr/qualification?projectId=${encodeURIComponent(projectId)}`).then((r) => r.json()).catch(() => ({ items: [] }))
     ]);
     setRuns(runsRes.runs || []);
     setRecipes(recipesRes.recipes || []);
     setSummary(summaryRes || null);
     setSchedulerState(recipesRes.schedulerState || summaryRes?.scheduler || null);
+    setQualifications(qualRes.items || []);
   }
 
   async function runNow(recipe: RecipeRow) {
@@ -91,6 +96,15 @@ export default function WlrRunsPage() {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ enabled })
+    });
+    await load();
+  }
+
+  async function setQualification(id: string, qualification_status: 'pursue' | 'nurture' | 'skip') {
+    await fetch(`/api/wlr/qualification/${id}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ qualification_status })
     });
     await load();
   }
@@ -157,14 +171,14 @@ export default function WlrRunsPage() {
                 <td className="px-3 py-2">{recipe.geography_label}</td>
                 <td className="px-3 py-2">{recipe.cadence_type}</td>
                 <td className="px-3 py-2">{recipe.enabled ? 'yes' : 'no'}</td>
-                <td className="px-3 py-2">{!recipe.enabled ? 'disabled' : recipe.cadence_type === 'manual' ? 'manual' : recipe.cadence_type === 'paused' ? 'paused' : 'scheduled'}</td>
+                <td className="px-3 py-2">{recipe.lifecycle_status || (!recipe.enabled ? 'disabled' : recipe.cadence_type === 'manual' ? 'manual' : recipe.cadence_type === 'paused' ? 'paused' : 'scheduled')}</td>
                 <td className="px-3 py-2">{recipe.confidence_threshold}</td>
                 <td className="px-3 py-2">{recipe.lead_cap}</td>
                 <td className="px-3 py-2">{recipe.next_run_at || '—'}</td>
                 <td className="px-3 py-2">{recipe.last_run_at || '—'}</td>
                 <td className="px-3 py-2">{recipe.last_run_origin || '—'}</td>
                 <td className="px-3 py-2">{recipe.last_sync_at || recipe.sync_state?.last_synced_at || '—'}</td>
-                <td className="px-3 py-2 text-xs">{recipe.last_failure_at ? `failed ${recipe.last_failure_at}` : recipe.last_success_at ? `ok ${recipe.last_success_at}` : '—'}{recipe.last_failure_message ? ` • ${recipe.last_failure_message}` : ''}</td>
+                <td className="px-3 py-2 text-xs">{recipe.pending_run_id ? `pending ${recipe.pending_run_id}` : recipe.last_failure_at ? `failed ${recipe.last_failure_at}` : recipe.last_success_at ? `ok ${recipe.last_success_at}` : '—'}{recipe.last_failure_message ? ` • ${recipe.last_failure_message}` : ''}</td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
                     <button className="btn px-2 py-1" onClick={() => toggleEnabled(recipe)}>{recipe.enabled ? 'Disable' : 'Enable'}</button>
@@ -224,6 +238,49 @@ export default function WlrRunsPage() {
         </p>
         <p>Scheduler tick: {summary?.scheduler?.lastTickAt || schedulerState?.last_tick_at || '—'} ({summary?.scheduler?.ok === false || schedulerState?.last_tick_ok === false ? 'error' : 'ok'})</p>
         {(summary?.scheduler?.lastError || schedulerState?.last_error) ? <p>Scheduler error: {summary?.scheduler?.lastError || schedulerState?.last_error}</p> : null}
+      </section>
+
+      <section className="panel p-4 text-sm">
+        <h3 className="text-lg mb-2">Custom-lane qualification</h3>
+        <div className="overflow-auto">
+          <table className="w-full min-w-[980px] text-sm">
+            <thead className="border-b border-white/10 text-zinc-400">
+              <tr>
+                <th className="px-3 py-2 text-left">Lead</th>
+                <th className="px-3 py-2 text-left">Status</th>
+                <th className="px-3 py-2 text-left">Score</th>
+                <th className="px-3 py-2 text-left">Signal summary</th>
+                <th className="px-3 py-2 text-left">Wedge</th>
+                <th className="px-3 py-2 text-left">Rationale</th>
+                <th className="px-3 py-2 text-left">Set</th>
+              </tr>
+            </thead>
+            <tbody>
+              {qualifications.slice(0, 20).map((q) => (
+                <tr key={q.id} className="border-b border-white/5">
+                  <td className="px-3 py-2">{q.lead?.email || q.lead_id}<div className="text-xs text-zinc-500">{q.lead?.company || '—'}</div></td>
+                  <td className="px-3 py-2">{q.qualification_status}</td>
+                  <td className="px-3 py-2">{q.total_score}</td>
+                  <td className="px-3 py-2 text-xs text-zinc-400">
+                    <div>{q.pain_signal || '—'}</div>
+                    <div>Change: {q.change_signal || '—'}</div>
+                    <div>Fit: {q.buildability_fit || '—'}</div>
+                    <div>Buyer: {q.stakeholder_label || '—'}</div>
+                  </td>
+                  <td className="px-3 py-2">{q.proposed_wedge || '—'}</td>
+                  <td className="px-3 py-2 text-xs text-zinc-400">{q.rationale_notes || '—'}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex gap-1">
+                      <button className="btn px-1 py-0.5 text-xs" onClick={() => setQualification(q.id, 'pursue')}>Pursue</button>
+                      <button className="btn px-1 py-0.5 text-xs" onClick={() => setQualification(q.id, 'nurture')}>Nurture</button>
+                      <button className="btn px-1 py-0.5 text-xs" onClick={() => setQualification(q.id, 'skip')}>Skip</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );

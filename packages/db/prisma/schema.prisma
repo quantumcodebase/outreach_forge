@@ -231,6 +231,10 @@ model wlr_search_recipes {
   confidence_threshold  Int       @default(60)
   lead_cap              Int       @default(200)
   settings_json         Json
+  lifecycle_status      String?   @db.Text
+  pending_run_id        String?   @db.Text
+  pending_run_started_at DateTime? @db.Timestamptz(6)
+  last_synced_source_run_id String? @db.Text
   next_run_at           DateTime? @db.Timestamptz(6)
   last_scheduled_run_at DateTime? @db.Timestamptz(6)
   last_run_origin       String?   @db.Text
@@ -267,4 +271,30 @@ model wlr_scheduler_state {
   last_tick_ok    Boolean   @default(true)
   last_error      String?   @db.Text
   updated_at      DateTime  @updatedAt @db.Timestamptz(6)
+}
+
+model lead_qualification {
+  id                   String   @id @default(uuid()) @db.Uuid
+  lead_id               String   @unique @db.Uuid
+  project_id            String   @db.Text
+  recipe_id             String?  @db.Uuid
+  signal_scope          String   @db.Text
+  pain_signal           String?  @db.Text
+  change_signal         String?  @db.Text
+  buildability_fit      String?  @db.Text
+  stakeholder_label     String?  @db.Text
+  proposed_wedge        String?  @db.Text
+  pain_score            Int      @default(0)
+  workflow_score        Int      @default(0)
+  buying_motion_score   Int      @default(0)
+  buildability_score    Int      @default(0)
+  stakeholder_score     Int      @default(0)
+  total_score           Int      @default(0)
+  qualification_status  String   @default("nurture") @db.Text
+  rationale_notes       String?  @db.Text
+  created_at            DateTime @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([project_id, qualification_status])
+  @@index([signal_scope, total_score])
 }
