@@ -275,26 +275,44 @@ model wlr_scheduler_state {
 
 model lead_qualification {
   id                   String   @id @default(uuid()) @db.Uuid
-  lead_id               String   @unique @db.Uuid
-  project_id            String   @db.Text
-  recipe_id             String?  @db.Uuid
-  signal_scope          String   @db.Text
-  pain_signal           String?  @db.Text
-  change_signal         String?  @db.Text
-  buildability_fit      String?  @db.Text
-  stakeholder_label     String?  @db.Text
-  proposed_wedge        String?  @db.Text
-  pain_score            Int      @default(0)
-  workflow_score        Int      @default(0)
-  buying_motion_score   Int      @default(0)
-  buildability_score    Int      @default(0)
-  stakeholder_score     Int      @default(0)
-  total_score           Int      @default(0)
-  qualification_status  String   @default("nurture") @db.Text
-  rationale_notes       String?  @db.Text
-  created_at            DateTime @default(now()) @db.Timestamptz(6)
-  updated_at            DateTime @updatedAt @db.Timestamptz(6)
+  lead_id              String   @unique @db.Uuid
+  project_id           String   @db.Text
+  recipe_id            String?  @db.Uuid
+  signal_scope         String   @db.Text
+  pain_signal          String?  @db.Text
+  change_signal        String?  @db.Text
+  buildability_fit     String?  @db.Text
+  stakeholder_label    String?  @db.Text
+  proposed_wedge       String?  @db.Text
+  pain_score           Int      @default(0)
+  workflow_score       Int      @default(0)
+  buying_motion_score  Int      @default(0)
+  buildability_score   Int      @default(0)
+  stakeholder_score    Int      @default(0)
+  total_score          Int      @default(0)
+  qualification_status String   @default("nurture") @db.Text
+  rationale_notes      String?  @db.Text
+  created_at           DateTime @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime @updatedAt @db.Timestamptz(6)
 
   @@index([project_id, qualification_status])
   @@index([signal_scope, total_score])
+}
+
+model wlr_promotion_queue {
+  id                String    @id @default(uuid()) @db.Uuid
+  lead_id           String    @unique @db.Uuid
+  project_id        String    @db.Text
+  recipe_id         String?   @db.Uuid
+  qualification_id  String?   @db.Uuid
+  promotion_status  String    @default("ready") @db.Text
+  destination_type  String    @default("outreach_queue") @db.Text
+  notes             String?   @db.Text
+  promoted_at       DateTime  @default(now()) @db.Timestamptz(6)
+  reviewed_at       DateTime? @db.Timestamptz(6)
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime  @updatedAt @db.Timestamptz(6)
+
+  @@index([project_id, promotion_status])
+  @@index([recipe_id, promoted_at])
 }
