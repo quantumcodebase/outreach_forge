@@ -306,6 +306,7 @@ model wlr_promotion_queue {
   recipe_id         String?   @db.Uuid
   qualification_id  String?   @db.Uuid
   promotion_status  String    @default("ready") @db.Text
+  enrollment_intent String    @default("none") @db.Text
   destination_type  String    @default("outreach_queue") @db.Text
   notes             String?   @db.Text
   promoted_at       DateTime  @default(now()) @db.Timestamptz(6)
@@ -314,6 +315,7 @@ model wlr_promotion_queue {
   updated_at        DateTime  @updatedAt @db.Timestamptz(6)
 
   @@index([project_id, promotion_status])
+  @@index([project_id, enrollment_intent])
   @@index([recipe_id, promoted_at])
 }
 

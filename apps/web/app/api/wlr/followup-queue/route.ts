@@ -1,11 +1,22 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@cockpit/db';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const VALID_FOLLOWUP_STATUSES = new Set(['ready', 'queued', 'paused']);
+
+function isUuid(value: string) {
+  return UUID_RE.test(value);
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const projectId = (searchParams.get('projectId') || 'intakevault').trim();
   const status = searchParams.get('status')?.trim() || null;
   const recipeId = searchParams.get('recipeId')?.trim() || null;
+
+  if (recipeId && !isUuid(recipeId)) {
+    return NextResponse.json({ error: 'invalid_recipe_id' }, { status: 400 });
+  }
 
   const rows = await prisma.wlr_followup_queue.findMany({
     where: {
@@ -57,9 +68,12 @@ export async function POST(req: Request) {
 
   if (!leadId) return NextResponse.json({ error: 'missing_lead_id' }, { status: 400 });
   if (!promotionId) return NextResponse.json({ error: 'missing_promotion_id' }, { status: 400 });
+  if (!isUuid(leadId)) return NextResponse.json({ error: 'invalid_lead_id' }, { status: 400 });
+  if (!isUuid(promotionId)) return NextResponse.json({ error: 'invalid_promotion_id' }, { status: 400 });
+  if (recipeId && !isUuid(recipeId)) return NextResponse.json({ error: 'invalid_recipe_id' }, { status: 400 });
+  if (qualificationId && !isUuid(qualificationId)) return NextResponse.json({ error: 'invalid_qualification_id' }, { status: 400 });
 
-  const validStatuses = new Set(['ready', 'queued', 'paused']);
-  if (!validStatuses.has(followupStatus)) {
+  if (!VALID_FOLLOWUP_STATUSES.has(followupStatus)) {
     return NextResponse.json({ error: 'invalid_followup_status' }, { status: 400 });
   }
 

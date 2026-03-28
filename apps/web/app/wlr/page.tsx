@@ -71,7 +71,13 @@ type QualificationRow = {
   rationale_notes: string | null;
   recipe?: { id: string; name: string; offer_name: string; offer_type: string; workflow_label: string } | null;
   lead?: { id: string; email: string; company: string | null; title?: string | null } | null;
-  promotion?: { id: string; promotion_status: 'ready' | 'staged' | 'paused'; promoted_at: string; notes: string | null } | null;
+  promotion?: {
+    id: string;
+    promotion_status: 'ready' | 'staged' | 'paused';
+    enrollment_intent: 'none' | 'campaign_ready' | 'hold';
+    promoted_at: string;
+    notes: string | null;
+  } | null;
 };
 
 type PromotionRow = {
@@ -80,6 +86,7 @@ type PromotionRow = {
   recipe_id: string | null;
   qualification_id: string | null;
   promotion_status: 'ready' | 'staged' | 'paused';
+  enrollment_intent: 'none' | 'campaign_ready' | 'hold';
   destination_type: string;
   promoted_at: string;
   reviewed_at: string | null;
@@ -159,6 +166,15 @@ function followupLabel(status: FollowupRow['followup_status']) {
   }
 }
 
+function enrollmentIntentLabel(intent: PromotionRow['enrollment_intent']) {
+  switch (intent) {
+    case 'campaign_ready': return 'campaign-ready';
+    case 'hold': return 'hold';
+    case 'none': return 'none';
+    default: return intent;
+  }
+}
+
 export default function WlrRunsPage() {
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [recipes, setRecipes] = useState<RecipeRow[]>([]);
@@ -172,6 +188,7 @@ export default function WlrRunsPage() {
   const [qualificationStatusFilter, setQualificationStatusFilter] = useState('all');
   const [recipeFilter, setRecipeFilter] = useState('all');
   const [promotionFilter, setPromotionFilter] = useState('all');
+  const [intentFilter, setIntentFilter] = useState('all');
 
   async function load() {
     const qs = new URLSearchParams({ projectId });
@@ -179,10 +196,12 @@ export default function WlrRunsPage() {
     if (qualificationStatusFilter !== 'all') qualQs.set('status', qualificationStatusFilter);
     if (recipeFilter !== 'all') qualQs.set('recipeId', recipeFilter);
     if (promotionFilter !== 'all') qualQs.set('promotionStatus', promotionFilter);
+    if (intentFilter !== 'all') qualQs.set('enrollmentIntent', intentFilter);
 
     const promoQs = new URLSearchParams({ projectId });
     if (recipeFilter !== 'all') promoQs.set('recipeId', recipeFilter);
     if (promotionFilter !== 'all') promoQs.set('status', promotionFilter);
+    if (intentFilter !== 'all') promoQs.set('enrollmentIntent', intentFilter);
 
     const [runsRes, recipesRes, summaryRes, qualRes, promoRes, followupRes] = await Promise.all([
       fetch(`/api/wlr/runs?${qs.toString()}&limit=20`).then((r) => r.json()),
@@ -278,9 +297,18 @@ export default function WlrRunsPage() {
     await load();
   }
 
+  async function setEnrollmentIntent(item: PromotionRow, enrollment_intent: 'none' | 'campaign_ready' | 'hold') {
+    await fetch(`/api/wlr/promotions/${item.id}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ enrollment_intent })
+    });
+    await load();
+  }
+
   useEffect(() => {
     load();
-  }, [projectId, qualificationStatusFilter, recipeFilter, promotionFilter]);
+  }, [projectId, qualificationStatusFilter, recipeFilter, promotionFilter, intentFilter]);
 
   const latestSync = recipes
     .map((r) => r.sync_state?.last_synced_at || r.last_sync_at)
@@ -293,6 +321,8 @@ export default function WlrRunsPage() {
     ready: promotions.filter((item) => item.promotion_status === 'ready').length,
     staged: promotions.filter((item) => item.promotion_status === 'staged').length,
     paused: promotions.filter((item) => item.promotion_status === 'paused').length,
+    campaignReady: promotions.filter((item) => item.enrollment_intent === 'campaign_ready').length,
+    hold: promotions.filter((item) => item.enrollment_intent === 'hold').length,
     followupReady: followups.filter((item) => item.followup_status === 'ready').length,
     followupQueued: followups.filter((item) => item.followup_status === 'queued').length,
   }), [promotions, followups]);
@@ -313,10 +343,11 @@ export default function WlrRunsPage() {
           <div className="panel-subtle p-2">Last sync: <b>{summary?.lastSyncAt || latestSync || '—'}</b></div>
           <div className="panel-subtle p-2">Promotion queue: <b>{promotions.length}</b><div className="text-xs text-zinc-500">ready {promotionCounts.ready} • staged {promotionCounts.staged} • paused {promotionCounts.paused}</div></div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs">
+          <div className="panel-subtle p-2">Enrollment intent: <b>{promotionCounts.campaignReady}</b><div className="text-zinc-500">campaign-ready • hold {promotionCounts.hold}</div></div>
           <div className="panel-subtle p-2">Follow-up queue: <b>{followups.length}</b><div className="text-zinc-500">ready {promotionCounts.followupReady} • queued {promotionCounts.followupQueued}</div></div>
-          <div className="panel-subtle p-2">Saved slice: <button className="underline" onClick={() => { setQualificationStatusFilter('pursue'); setPromotionFilter('ready'); }}>pursue + ready</button></div>
-          <div className="panel-subtle p-2">Saved slice: <button className="underline" onClick={() => { setQualificationStatusFilter('all'); setPromotionFilter('paused'); }}>paused promotions</button></div>
+          <div className="panel-subtle p-2">Saved slice: <button className="underline" onClick={() => { setQualificationStatusFilter('pursue'); setPromotionFilter('ready'); setIntentFilter('campaign_ready'); }}>pursue + ready + campaign-ready</button></div>
+          <div className="panel-subtle p-2">Saved slice: <button className="underline" onClick={() => { setQualificationStatusFilter('all'); setPromotionFilter('paused'); setIntentFilter('all'); }}>paused promotions</button></div>
         </div>
         <div className="text-xs text-zinc-500">Scheduler timezone: America/Puerto_Rico. Last tick: {schedulerState?.last_tick_at || schedulerState?.lastTickAt || '—'} {schedulerState?.last_tick_ok === false || schedulerState?.ok === false ? `• error: ${schedulerState?.last_error || schedulerState?.lastError}` : ''}</div>
         {status ? <p className="text-sm text-zinc-400">{status}</p> : null}
@@ -415,9 +446,15 @@ export default function WlrRunsPage() {
             <option value="staged">Staged</option>
             <option value="paused">Paused</option>
           </select>
+          <select className="control" value={intentFilter} onChange={(e) => setIntentFilter(e.target.value)}>
+            <option value="all">All enrollment intents</option>
+            <option value="none">No intent</option>
+            <option value="campaign_ready">Campaign-ready</option>
+            <option value="hold">Hold</option>
+          </select>
           <div className="text-xs text-zinc-500">Reviewing {qualifications.length} leads</div>
-          <button className="btn px-2 py-1 text-xs" onClick={() => { setQualificationStatusFilter('all'); setRecipeFilter('all'); setPromotionFilter('all'); }}>Reset filters</button>
-          <button className="btn px-2 py-1 text-xs" onClick={() => { setQualificationStatusFilter('pursue'); setRecipeFilter('all'); setPromotionFilter('ready'); }}>Ready for outreach</button>
+          <button className="btn px-2 py-1 text-xs" onClick={() => { setQualificationStatusFilter('all'); setRecipeFilter('all'); setPromotionFilter('all'); setIntentFilter('all'); }}>Reset filters</button>
+          <button className="btn px-2 py-1 text-xs" onClick={() => { setQualificationStatusFilter('pursue'); setRecipeFilter('all'); setPromotionFilter('ready'); setIntentFilter('campaign_ready'); }}>Campaign-ready</button>
           <button className="btn px-2 py-1 text-xs" onClick={() => { setQualificationStatusFilter('all'); setRecipeFilter('all'); setPromotionFilter('unpromoted'); }}>Needs promotion</button>
         </div>
         <div className="overflow-auto">
@@ -496,6 +533,7 @@ export default function WlrRunsPage() {
                 <th className="px-3 py-2 text-left">Wedge</th>
                 <th className="px-3 py-2 text-left">Promoted</th>
                 <th className="px-3 py-2 text-left">Destination</th>
+                <th className="px-3 py-2 text-left">Enrollment intent</th>
                 <th className="px-3 py-2 text-left">Follow-up bridge</th>
               </tr>
             </thead>
@@ -511,6 +549,14 @@ export default function WlrRunsPage() {
                   <td className="px-3 py-2 text-xs">{item.qualification?.proposed_wedge || '—'}</td>
                   <td className="px-3 py-2 text-xs">{item.promoted_at}</td>
                   <td className="px-3 py-2 text-xs">{item.destination_type}</td>
+                  <td className="px-3 py-2 text-xs">
+                    <div>{enrollmentIntentLabel(item.enrollment_intent)}</div>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      <button className="btn px-1 py-0.5 text-xs" onClick={() => setEnrollmentIntent(item, 'campaign_ready')}>Campaign-ready</button>
+                      <button className="btn px-1 py-0.5 text-xs" onClick={() => setEnrollmentIntent(item, 'hold')}>Hold</button>
+                      <button className="btn px-1 py-0.5 text-xs" onClick={() => setEnrollmentIntent(item, 'none')}>Clear</button>
+                    </div>
+                  </td>
                   <td className="px-3 py-2 text-xs">
                     <div>{followup ? `follow-up ${followup.followup_status}` : 'not queued'}</div>
                     <div className="mt-1 flex flex-wrap gap-1">
