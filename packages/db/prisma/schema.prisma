@@ -316,3 +316,22 @@ model wlr_promotion_queue {
   @@index([project_id, promotion_status])
   @@index([recipe_id, promoted_at])
 }
+
+model wlr_followup_queue {
+  id               String    @id @default(uuid()) @db.Uuid
+  lead_id          String    @unique @db.Uuid
+  project_id       String    @db.Text
+  recipe_id        String?   @db.Uuid
+  qualification_id String?   @db.Uuid
+  promotion_id     String?   @db.Uuid
+  followup_status  String    @default("ready") @db.Text
+  destination_type String    @default("followup_queue") @db.Text
+  notes            String?   @db.Text
+  queued_at        DateTime  @default(now()) @db.Timestamptz(6)
+  reviewed_at      DateTime? @db.Timestamptz(6)
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime  @updatedAt @db.Timestamptz(6)
+
+  @@index([project_id, followup_status])
+  @@index([recipe_id, queued_at])
+}

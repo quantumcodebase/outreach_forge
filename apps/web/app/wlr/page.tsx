@@ -82,10 +82,28 @@ type PromotionRow = {
   promotion_status: 'ready' | 'staged' | 'paused';
   destination_type: string;
   promoted_at: string;
+  reviewed_at: string | null;
   notes: string | null;
   lead?: { id: string; email: string; company: string | null; title?: string | null } | null;
   recipe?: { id: string; name: string; offer_name: string; offer_type: string } | null;
   qualification?: QualificationRow | null;
+};
+
+type FollowupRow = {
+  id: string;
+  lead_id: string;
+  recipe_id: string | null;
+  qualification_id: string | null;
+  promotion_id: string | null;
+  followup_status: 'ready' | 'queued' | 'paused';
+  destination_type: string;
+  queued_at: string;
+  reviewed_at: string | null;
+  notes: string | null;
+  lead?: { id: string; email: string; company: string | null; title?: string | null } | null;
+  recipe?: { id: string; name: string; offer_name: string; offer_type: string } | null;
+  qualification?: QualificationRow | null;
+  promotion?: PromotionRow | null;
 };
 
 function lifecycleLabel(recipe: RecipeRow) {
@@ -123,6 +141,24 @@ function healthTone(recipe: RecipeRow) {
   return 'text-zinc-300';
 }
 
+function promotionLabel(status: PromotionRow['promotion_status']) {
+  switch (status) {
+    case 'ready': return 'ready for outreach';
+    case 'staged': return 'staged for next step';
+    case 'paused': return 'paused';
+    default: return status;
+  }
+}
+
+function followupLabel(status: FollowupRow['followup_status']) {
+  switch (status) {
+    case 'ready': return 'follow-up ready';
+    case 'queued': return 'queued for follow-up';
+    case 'paused': return 'follow-up paused';
+    default: return status;
+  }
+}
+
 export default function WlrRunsPage() {
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [recipes, setRecipes] = useState<RecipeRow[]>([]);
@@ -131,6 +167,7 @@ export default function WlrRunsPage() {
   const [status, setStatus] = useState<string>('');
   const [qualifications, setQualifications] = useState<QualificationRow[]>([]);
   const [promotions, setPromotions] = useState<PromotionRow[]>([]);
+  const [followups, setFollowups] = useState<FollowupRow[]>([]);
   const [projectId, setProjectId] = useState('intakevault');
   const [qualificationStatusFilter, setQualificationStatusFilter] = useState('all');
   const [recipeFilter, setRecipeFilter] = useState('all');
@@ -147,12 +184,13 @@ export default function WlrRunsPage() {
     if (recipeFilter !== 'all') promoQs.set('recipeId', recipeFilter);
     if (promotionFilter !== 'all') promoQs.set('status', promotionFilter);
 
-    const [runsRes, recipesRes, summaryRes, qualRes, promoRes] = await Promise.all([
+    const [runsRes, recipesRes, summaryRes, qualRes, promoRes, followupRes] = await Promise.all([
       fetch(`/api/wlr/runs?${qs.toString()}&limit=20`).then((r) => r.json()),
       fetch(`/api/wlr/recipes?${qs.toString()}`).then((r) => r.json()),
       fetch(`/api/wlr/summary?${qs.toString()}`).then((r) => r.json()),
       fetch(`/api/wlr/qualification?${qualQs.toString()}`).then((r) => r.json()).catch(() => ({ items: [] })),
       fetch(`/api/wlr/promotions?${promoQs.toString()}`).then((r) => r.json()).catch(() => ({ items: [] })),
+      fetch(`/api/wlr/followup-queue?${promoQs.toString()}`).then((r) => r.json()).catch(() => ({ items: [] })),
     ]);
     setRuns(runsRes.runs || []);
     setRecipes(recipesRes.recipes || []);
@@ -160,6 +198,7 @@ export default function WlrRunsPage() {
     setSchedulerState(recipesRes.schedulerState || summaryRes?.scheduler || null);
     setQualifications(qualRes.items || []);
     setPromotions(promoRes.items || []);
+    setFollowups(followupRes.items || []);
   }
 
   async function runNow(recipe: RecipeRow) {
@@ -217,6 +256,28 @@ export default function WlrRunsPage() {
     await load();
   }
 
+  async function queueFollowup(item: PromotionRow, followup_status: 'ready' | 'queued' | 'paused') {
+    const existing = followups.find((row) => row.lead_id === item.lead_id)?.id;
+    const url = existing ? `/api/wlr/followup-queue/${existing}` : '/api/wlr/followup-queue';
+    const body = existing
+      ? { followup_status }
+      : {
+          leadId: item.lead_id,
+          projectId,
+          recipeId: item.recipe_id,
+          qualificationId: item.qualification_id,
+          promotionId: item.id,
+          followup_status,
+        };
+
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    await load();
+  }
+
   useEffect(() => {
     load();
   }, [projectId, qualificationStatusFilter, recipeFilter, promotionFilter]);
@@ -228,6 +289,13 @@ export default function WlrRunsPage() {
     .reverse()[0];
 
   const recipeOptions = useMemo(() => recipes.filter((r) => r.offer_type === 'custom'), [recipes]);
+  const promotionCounts = useMemo(() => ({
+    ready: promotions.filter((item) => item.promotion_status === 'ready').length,
+    staged: promotions.filter((item) => item.promotion_status === 'staged').length,
+    paused: promotions.filter((item) => item.promotion_status === 'paused').length,
+    followupReady: followups.filter((item) => item.followup_status === 'ready').length,
+    followupQueued: followups.filter((item) => item.followup_status === 'queued').length,
+  }), [promotions, followups]);
 
   return (
     <div className="space-y-4">
@@ -243,7 +311,12 @@ export default function WlrRunsPage() {
           <div className="panel-subtle p-2">Auto-scheduled: <b>{summary?.activeScheduledRecipes ?? 0}</b></div>
           <div className="panel-subtle p-2">Runs (24h): <b>{summary?.runsRecent ?? 0}</b></div>
           <div className="panel-subtle p-2">Last sync: <b>{summary?.lastSyncAt || latestSync || '—'}</b></div>
-          <div className="panel-subtle p-2">Promotion queue: <b>{promotions.length}</b></div>
+          <div className="panel-subtle p-2">Promotion queue: <b>{promotions.length}</b><div className="text-xs text-zinc-500">ready {promotionCounts.ready} • staged {promotionCounts.staged} • paused {promotionCounts.paused}</div></div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+          <div className="panel-subtle p-2">Follow-up queue: <b>{followups.length}</b><div className="text-zinc-500">ready {promotionCounts.followupReady} • queued {promotionCounts.followupQueued}</div></div>
+          <div className="panel-subtle p-2">Saved slice: <button className="underline" onClick={() => { setQualificationStatusFilter('pursue'); setPromotionFilter('ready'); }}>pursue + ready</button></div>
+          <div className="panel-subtle p-2">Saved slice: <button className="underline" onClick={() => { setQualificationStatusFilter('all'); setPromotionFilter('paused'); }}>paused promotions</button></div>
         </div>
         <div className="text-xs text-zinc-500">Scheduler timezone: America/Puerto_Rico. Last tick: {schedulerState?.last_tick_at || schedulerState?.lastTickAt || '—'} {schedulerState?.last_tick_ok === false || schedulerState?.ok === false ? `• error: ${schedulerState?.last_error || schedulerState?.lastError}` : ''}</div>
         {status ? <p className="text-sm text-zinc-400">{status}</p> : null}
@@ -343,6 +416,9 @@ export default function WlrRunsPage() {
             <option value="paused">Paused</option>
           </select>
           <div className="text-xs text-zinc-500">Reviewing {qualifications.length} leads</div>
+          <button className="btn px-2 py-1 text-xs" onClick={() => { setQualificationStatusFilter('all'); setRecipeFilter('all'); setPromotionFilter('all'); }}>Reset filters</button>
+          <button className="btn px-2 py-1 text-xs" onClick={() => { setQualificationStatusFilter('pursue'); setRecipeFilter('all'); setPromotionFilter('ready'); }}>Ready for outreach</button>
+          <button className="btn px-2 py-1 text-xs" onClick={() => { setQualificationStatusFilter('all'); setRecipeFilter('all'); setPromotionFilter('unpromoted'); }}>Needs promotion</button>
         </div>
         <div className="overflow-auto">
           <table className="w-full min-w-[1500px] text-sm">
@@ -410,25 +486,70 @@ export default function WlrRunsPage() {
       <section className="panel p-4 text-sm">
         <h3 className="text-lg mb-2">Promotion queue</h3>
         <div className="overflow-auto">
-          <table className="w-full min-w-[1100px] text-sm">
+          <table className="w-full min-w-[1400px] text-sm">
             <thead className="border-b border-white/10 text-zinc-400">
               <tr>
                 <th className="px-3 py-2 text-left">Lead</th>
                 <th className="px-3 py-2 text-left">Recipe</th>
                 <th className="px-3 py-2 text-left">Status</th>
                 <th className="px-3 py-2 text-left">Qualification</th>
+                <th className="px-3 py-2 text-left">Wedge</th>
                 <th className="px-3 py-2 text-left">Promoted</th>
+                <th className="px-3 py-2 text-left">Destination</th>
+                <th className="px-3 py-2 text-left">Follow-up bridge</th>
+              </tr>
+            </thead>
+            <tbody>
+              {promotions.map((item) => {
+                const followup = followups.find((row) => row.lead_id === item.lead_id);
+                return (
+                <tr key={item.id} className="border-b border-white/5">
+                  <td className="px-3 py-2">{item.lead?.email || item.lead_id}<div className="text-xs text-zinc-500">{item.lead?.company || '—'}{item.lead?.title ? ` • ${item.lead.title}` : ''}</div></td>
+                  <td className="px-3 py-2">{item.recipe?.name || item.recipe_id || '—'}<div className="text-xs text-zinc-500">{item.recipe?.offer_name || '—'}{item.recipe?.offer_type ? ` • ${item.recipe.offer_type}` : ''}</div></td>
+                  <td className="px-3 py-2">{promotionLabel(item.promotion_status)}<div className="text-xs text-zinc-500">reviewed {item.reviewed_at || '—'}</div></td>
+                  <td className="px-3 py-2">{item.qualification?.qualification_status || '—'}<div className="text-xs text-zinc-500">score {item.qualification?.total_score ?? '—'}</div></td>
+                  <td className="px-3 py-2 text-xs">{item.qualification?.proposed_wedge || '—'}</td>
+                  <td className="px-3 py-2 text-xs">{item.promoted_at}</td>
+                  <td className="px-3 py-2 text-xs">{item.destination_type}</td>
+                  <td className="px-3 py-2 text-xs">
+                    <div>{followup ? `follow-up ${followup.followup_status}` : 'not queued'}</div>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      <button className="btn px-1 py-0.5 text-xs" onClick={() => queueFollowup(item, 'ready')}>Follow-up ready</button>
+                      <button className="btn px-1 py-0.5 text-xs" onClick={() => queueFollowup(item, 'queued')}>Queue</button>
+                      <button className="btn px-1 py-0.5 text-xs" onClick={() => queueFollowup(item, 'paused')}>Pause</button>
+                    </div>
+                  </td>
+                </tr>
+              )})}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="panel p-4 text-sm">
+        <h3 className="text-lg mb-2">Follow-up queue</h3>
+        <div className="overflow-auto">
+          <table className="w-full min-w-[1200px] text-sm">
+            <thead className="border-b border-white/10 text-zinc-400">
+              <tr>
+                <th className="px-3 py-2 text-left">Lead</th>
+                <th className="px-3 py-2 text-left">Recipe</th>
+                <th className="px-3 py-2 text-left">Status</th>
+                <th className="px-3 py-2 text-left">Qualification</th>
+                <th className="px-3 py-2 text-left">Wedge</th>
+                <th className="px-3 py-2 text-left">Queued</th>
                 <th className="px-3 py-2 text-left">Destination</th>
               </tr>
             </thead>
             <tbody>
-              {promotions.map((item) => (
+              {followups.map((item) => (
                 <tr key={item.id} className="border-b border-white/5">
-                  <td className="px-3 py-2">{item.lead?.email || item.lead_id}<div className="text-xs text-zinc-500">{item.lead?.company || '—'}</div></td>
-                  <td className="px-3 py-2">{item.recipe?.name || item.recipe_id || '—'}</td>
-                  <td className="px-3 py-2">{item.promotion_status}</td>
+                  <td className="px-3 py-2">{item.lead?.email || item.lead_id}<div className="text-xs text-zinc-500">{item.lead?.company || '—'}{item.lead?.title ? ` • ${item.lead.title}` : ''}</div></td>
+                  <td className="px-3 py-2">{item.recipe?.name || item.recipe_id || '—'}<div className="text-xs text-zinc-500">{item.recipe?.offer_name || '—'}</div></td>
+                  <td className="px-3 py-2">{followupLabel(item.followup_status)}<div className="text-xs text-zinc-500">reviewed {item.reviewed_at || '—'}</div></td>
                   <td className="px-3 py-2">{item.qualification?.qualification_status || '—'}<div className="text-xs text-zinc-500">score {item.qualification?.total_score ?? '—'}</div></td>
-                  <td className="px-3 py-2 text-xs">{item.promoted_at}</td>
+                  <td className="px-3 py-2 text-xs">{item.qualification?.proposed_wedge || '—'}</td>
+                  <td className="px-3 py-2 text-xs">{item.queued_at}</td>
                   <td className="px-3 py-2 text-xs">{item.destination_type}</td>
                 </tr>
               ))}
